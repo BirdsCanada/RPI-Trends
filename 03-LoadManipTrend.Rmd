@@ -1,0 +1,94 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+#Trends
+
+Version: May 17 2023
+Author: Danielle
+
+##Setup
+
+The setup files will get you ready for your analysis. It loads you libraries, needed tables, created directories for your outputs, and assigns some parameter values. 
+
+Also assign max year of the analysis. Generally, the data in NatureCounts are 2 years behind. 
+
+```{r setup}
+
+max.year <- 2021 #needs changes with each analysis
+ID<- "dethier" #change this to your user ID. You will be prompted for a password. 
+
+```
+
+## Choose your CMMN station {#Setup3.1}
+
+The number assigned to `t` will correspond to the row in the analysis parameters file ('anal.param') you want to analyze (each site has a separate row).
+
+View the file to identify the row you want to select
+```{r view}
+
+## Import site-specific analysis parameters 
+##This will need checked and updated before each analysis
+anal.param <- read.csv("Data/CMMN_Analysis_ParameterValues.csv") 
+View(anal.param)
+
+```
+
+Select your station. 
+```{r chooseSite}
+
+t <- 9
+
+```
+
+## Data manipulations {#Setup3.2}
+
+Now that you have selected the CMMN site, we are going to clean the data. The cleaning scripts do the following: 
+
+  - Load the data from the naturecounts database. You will be prompted for your password. The code will first look to see if the data have been downloaded and stored. 
+  - Subset data to min and max year based on analysis parameters file.
+  - Calculate season-specific station windows (when a station normally operates).
+  - Make list of sampling dates for zero-filling (based on *DET*)
+  - Assign Species Code, and drop species that won't be analyzed (i.e., updates to taxonomies).
+  - Use the superfile to filter to species and season of interest.
+  - Assign UNEM For LPBO data only.
+  - Save the manipulated data in the `Data` folder
+  - Generates a species list for the analysis
+  - Create output tables for the analysis
+  
+First, assign 'u' your NatureCounts username and run the `prepare` scripts.
+
+```{r data manip}
+  
+ID<-"dethier" 
+source("i_prepare.R")
+source("ii_outputs.R")
+
+```
+
+## Data Analysis
+
+From this point forward, we loop through species and season:
+
+1) Zero-fill the data using the `events` matrix 
+
+2) Apply species-specific filters to abundance (mean 10 individuals/year), occurrence (mean 5 observation days/year), and drop years with no observations.
+
+3) Run the trend analysis by looping through year periods (10-year periods)
+
+
+```{r Change Defaults}
+
+source("iii_analysis.R")
+
+```
+
+## Plot Output
+
+```{r Change Defaults}
+
+source("iv_plot.R")
+
+```
+

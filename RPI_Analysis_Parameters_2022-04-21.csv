@@ -1,0 +1,81 @@
+SiteCode,site,seas,data.type,min.yr.filt,max.yr.filt,region,include,Comments
+HawkCount-100,"Holiday Beach, ON",fall,hourly,1979,,East,,
+HawkCount-104,"Jacks Mt, PA",fall,hourly,2009,,East,,
+HawkCount-105,"Rose Tree Park, PA",fall,hourly,2002,,East,,
+HawkCount-109,"Hawk Mountain, PA",fall,daily,1936,,East,,Note: this causes issues for TUVU and BLVU since they the are not monitored in early years and will not have 'all years' output. I needed to manually generate this by resetting the start year to 1967 (as it had been in the 2016 analysis). 
+HawkCount-109,"Hawk Mountain, PA",spring,hourly,1999,,East,,
+HawkCount-111,"Allegheny Front, PE",fall,hourly,2002,,East,,
+HawkCount-111,"Allegheny Front, PE",spring,hourly,,,East,,
+HawkCount-123,"Dinosaur Ridge, CO",spring,hourly,2001,,West,,
+HawkCount-138,"Lighthouse Point, CT",fall,hourly,1974,,East,,
+HawkCount-149,"Quaker Ridge, CT",fall,hourly,2002,,East,,Change min year in 2019 analysis 
+HawkCount-169,"Cape Henlopen, DE",fall,daily,2010,,East,,"New 2019. Data from 2002-2019. Use only 2010-present. 2010 is daily, rest is hourly. "
+HawkCount-172,"Hitchcock Nature Center, IA",fall,hourly,2006,,Central,,
+HawkCount-181,"Barre Falls, MA",fall,hourly,2002,,East,,
+HawkCount-272,"Fort Smallwood, MD",spring,hourly,1994,,East,,
+HawkCount-279,"Washington Monument State Park, MD",fall,hourly,2005,,East,,
+HawkCount-280,"Acadia Nat Park, ME",fall,hourly,1997,,East,,
+HawkCount-285,"Detroit River hawk watch, MI",fall,hourly,1991,,East,,
+HawkCount-286,"Whitefish Point, MI",spring,daily,1979,,Central,,
+HawkCount-288,"Hawk Ridge, MN",fall,daily,1974,,Central,,
+HawkCount-300,"Mahogany Rock, NC",fall,hourly,2003,,East,,
+HawkCount-320,"Pack Monadnock, NH",fall,hourly,2006,,East,,
+HawkCount-328,"Cape May, NJ",fall,hourly,1976,,East,,
+HawkCount-332,"Kittatinny Mt, NJ",fall,hourly,2002,,East,,
+HawkCount-334,"Montclair, NJ",fall,hourly,,,East,,
+HawkCount-334,"Montclair, NJ",spring,hourly,,,East,,
+HawkCount-342,"Scotts Mt, NJ",fall,daily,2002,,East,,New 2019
+HawkCount-353,"Braddock Bay, NY",spring,hourly,1984,,East,,
+HawkCount-358,"Derby Hill, NY",spring,hourly,1979,,East,,
+HawkCount-359,"Fire Island, NY",fall,daily,2004,,East,,New 2019. Use 2004 to present. 
+HawkCount-361,"Franklin Mountain, NY",fall,hourly,2000,,East,,
+HawkCount-364,"Hamburg Hawk Watch, NY",spring,hourly,2003,,East,,
+HawkCount-368,"Hook Mountain, NY",fall,daily,2002,,East,,"New 2019. Mostly daily, some hourly. "
+HawkCount-372,"Mount Peter, NY",fall,hourly,1978,,East,,
+HawkCount-381,"Ripley Hawk Watch, NY",spring,hourly,2004,,East,,
+HawkCount-389,"Grimsby-Beamer Conservation Area, ON",spring,hourly,,,East,,
+HawkCount-391,"Cranberry Marsh, Ontario, Canada",fall,hourly,2006,,East,,New 2019. 
+HawkCount-392,"Hawk Cliff, ON",fall,hourly,2002,,East,,
+HawkCount-393,"High Park, ON",fall,hourly,2000,,East,,
+HawkCount-399,"Bake Oven Knob, PA",fall,daily,2002,,East,,New 2019.
+HawkCount-420,Little Gap,fall,daily,,,East,,Added back in 2019 analysis. Poor coverage in recent years. 
+HawkCount-423,"Militia Hill, PA",fall,hourly,1992,,East,,
+HawkCount-432,"Second Mt, PA",fall,hourly,2002,,East,,
+HawkCount-436,"Stone Mt, PA",fall,hourly,1995,,East,,
+HawkCount-438,"Tussey Mt, PA",spring,daily,2002,,East,,
+HawkCount-439,"Waggoners Gap, PA",fall,hourly,1985,,East,,
+HawkCount-468,"Bentsen Rio Grande, TX",spring,hourly,,,Gulf,,
+HawkCount-470,"Corpus Christi, TX",fall,daily,1997,,Gulf,,Data are collected hourly but 2017 is entered incorrectly. Download as daily
+HawkCount-476,"College Creek, VA",spring,hourly,1997,,East,,
+HawkCount-482,"Harvey's Knob, VA",Fall,hourly,2005,,East,,New 2019
+HawkCount-484,"Kiptopeke, VA",fall,hourly,1984,,East,,
+HawkCount-491,"Rockfish Gap, Virginia",fall,hourly,2000,,East,,New 2019. 
+HawkCount-494,"Snicker's Gap, VA",fall,hourly,,,East,,
+HawkCount-506,"Putney Mt, VT",fall,daily,2003,,East,,New 2019. 
+HawkCount-519,"Hanging Rock Tower, WV",fall,hourly,2003,,East,,
+HawkCount-527,"Illinois Beach State Park, IL",fall,hourly,2002,,Central,,
+HawkCount-528,"Veracruz, Chichicaxtle",fall,hourly,1995,,Gulf,,
+HawkCount-534,"Chestnut Ridge, NY",fall,hourly,2000,,East,,New 2019
+HawkCount-540,"Eagle Crossing, QU",spring,daily,,,East,,
+HawkCount-541,"Montreal West Island Hawkwatch, Quebec",fall,daily,1990,,East,,
+HawkCount-551,"Caesars Head, SC",fall,hourly,2003,,East,,
+HawkCount-563,"Smith Point, TX",fall,hourly,1997,,Gulf,,
+HawkCount-572,"Tadoussac, QC",fall,hourly,1994,,East,,
+HawkCount-578,"Yaki Point, AZ",fall,hourly,,,West,,
+HawkCount-583,Florida Keys,fall,daily,1999,,East,,New 2019. Hourly but 2017-2019 is daily. 
+HawkCount-584,"Lucky Peak, ID",fall,daily,1995,,West,,New 2019. 
+HawkCount-590,"Bridger Mnts, MT",fall,hourly,1996,,West,,
+HawkCount-592,"Goshutes, NV",fall,daily,1983,,West,,Changed to daily because was not pulling 2017 data. 
+HawkCount-596,"Manzanos, NM",fall,daily,1985,,West,,Mixed.
+HawkCount-601,"Bonney Butte, OR",fall,hourly,1994,,West,,
+HawkCount-611,"Chelan Ridge, WA",fall,hourly,1998,,West,,"Only use 2008-present (reverted to 1998, David O request)"
+HawkCount-616,"Bradbury Mountain, Maine",spring,hourly,2008,,East,,New 2019
+HawkCount-656,"SC Raptor Migration Survey, SC",fall,hourly,2006,,East,,New 2019
+HawkCount-660,"Greene Valley Forest Preserve, IL",fall,hourly,2007,,Central,,New 2019
+HawkCount-663,"Ashland Nature Center, Delaware",fall,hourly,2009,,East,,"New 2019, Omit 2008. Started in 2009. "
+HawkCount-671,"Presque Isle, PA",spring,hourly,2009,,East,,New 2019. Started in 2010. 
+HawkCount-682,"CerroAncon, Panama",fall,daily,2010,,Gulf,,"New 2019. all hourly, 1 year daily"
+HawkCount-686,"Greenlaw Mt, NB",fall,daily,2009,,East,,New 2019. 2017 is daily.
+HawkCount-690,"Commissary Ridger, WY",fall,daily,2002,,West,,"New 2019. 2010 is daily, the rest is hourly.  Started in 2010.  "
+HawkCount-699,"Brockway, MI",spring,daily,,,Central,,
+HawkCount-741,"Veracruz, Cardel",fall,hourly,1995,,Gulf,,

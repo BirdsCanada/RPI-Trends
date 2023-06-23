@@ -1,0 +1,96 @@
+---
+title: "RPI_Plot"
+author: "Danielle Ethier"
+date: "3/20/2020"
+output: html_document
+---
+
+
+#station coverage plots
+
+```{r load packages, echo = FALSE, message = FALSE}
+
+require(INLA)		# for analyzing data
+require(reshape) 	# for summarizing/reshaping data
+require(dplyr)# for summarizing data (better than reshape for most things)
+require(doBy)
+require(lattice)
+require(ggplot2)
+require(lubridate)
+
+```
+
+
+```{r set directory, echo = FALSE, message = FALSE}
+
+# directory to post plots
+  in.dir <- "I:/r-functions/work/rpi/TrendAnalysis/output/2019/"
+  out.dir <- "I:/r-functions/work/rpi/TrendAnalysis/plots/2019/stationEffort/"
+  
+# read in list of sites/seasons to analyze
+  anal.param <- read.csv("I:/r-functions/work/rpi/TrendAnalysis/Data/RPI_Analysis_Parameters.csv")
+
+```
+
+## Including Plots
+
+Plot using raw data the station coverage plots
+
+```{r Data Manip and plotting, echo = FALSE, message = FALSE}
+
+ for(i in 1:nrow(anal.param)){  # loop through sites and seasons
+
+   #for testing
+   #i<-48
+
+max.yr<-2019
+   
+#information that is needed from each site for the plots 
+ site <- as.character(anal.param[i, "SiteCode"])
+ name<-as.character(anal.param[i, "site"])
+ seas <- as.character(anal.param[i,"seas"])
+ min.yr.filt <- anal.param[i,"min.yr.filt"]
+ max.yr.filt <- anal.param[i,"max.yr.filt"]
+
+############################################################################
+# READ IN DATA AND MANIPULATE - SITE AND SEASON SPECIFIC
+
+  in.data <- read.csv(paste(in.dir, site, ".", seas, ".raw.csv", sep = ""))
+  in.data <- subset(in.data, !is.na(datetime))
+
+#since the dates are in different formates they need to be made the same before proceeding. 
+  in.data$date<-parse_date_time(in.data$datetime, orders = c('ymdHM', 'mdyHM', 'ymdHMS'))
+  in.data$year <- as.POSIXlt(in.data$date)$year + 1900
+  in.data$doy <- as.POSIXlt(in.data$date)$yday
+
+# drop years where necessary (eg., last year in dataset might not be completely entered or perhaps based on what years were analyzed previously. Assign max year as what is listed in anal.param, or maximum year in database
+
+# if no reason to drop any years at beginning (in anal.param), use min year in dataframe
+  min.yr.filt <- ifelse(is.na(min.yr.filt), min(in.data$year), min.yr.filt)
+  max.yr.filt <- ifelse(is.na(max.yr.filt), max.yr, max.yr.filt)
+
+
+
+# calculate number of observation hours/day
+
+
+  pdf(paste(out.dir, site, ".", name, ".", seas, ".StationEffort.pdf", sep=""),
+	height = 10, width = 8, paper = "letter")
+  par(mfrow = c(1, 1))
+  
+  print(ggplot(in.data, aes(x=as.numeric(year), y=doy))+ 
+    geom_point()+
+    geom_smooth(method="lm")+
+	xlab("Year") +
+	ylab("Day of Year")) 
+  
+  
+  dev.off()
+
+  } # end of i loop
+  
+
+
+```
+
+

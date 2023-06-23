@@ -1,0 +1,145 @@
+---
+title: "RPI_PlotResults"
+author: "Danielle Ethier"
+date: "4/15/2020"
+output: html_document
+---
+
+#plot the final RPI output results for each stations to be visually inspected prior to posting on the website
+
+```{r load packages, echo = FALSE, message = FALSE}
+
+require(ggplot2)
+
+```
+
+```{r set directory, echo = FALSE, message = FALSE}
+
+# directory to post plots
+  in.dir <- "I:/r-functions/work/rpi/TrendAnalysis/output/2019/"
+  out.dir <- "I:/r-functions/work/rpi/TrendAnalysis/plots/2019/TrendPlots/"
+  
+# read in list of sites/seasons to analyze
+  anal.param <- read.csv("I:/r-functions/work/rpi/TrendAnalysis/Data/RPI_Analysis_Parameters.csv")
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r Plotting, echo = FALSE, message = FALSE}
+
+# for(i in 1:nrow(anal.param)){  # loop through sites and seasons
+
+   for(i in 60:80){  # loop through sites and seasons
+   #for testing
+   i<-7
+
+ max.yr <- 2019  
+
+ site <- as.character(anal.param[i, "SiteCode"])
+ name<-as.character(anal.param[i, "site"])
+ sites = NA #c("HawkCount-389","HawkCount-625") # vector, if there are more than 1 site to combine.
+
+ seas <- as.character(anal.param[i,"seas"])
+ min.yr.filt <- anal.param[i,"min.yr.filt"]
+ max.yr.filt <- anal.param[i,"max.yr.filt"]
+ 
+
+# read in trend output
+
+trnd <- read.csv(paste(in.dir, site, ".", seas, ".Trends.", max.yr, ".csv", sep = ""))
+trnd <- trnd[order(trnd$sort_order),]
+trnd <- trnd %>%
+  filter(!(is.na(SpeciesCode)) & period == "all years") %>%
+  select(-mean, -sd, -lcl, -mid, -ucl, -mode, -kld, -results_code, -trnd_order, -model_type, -period, -years)
+
+options(digits = 2)
+
+sp.trnd <- trnd %>%
+  mutate(
+      sp.trend = paste( english_name, " : ", 
+			round( trnd, digits = 2),  " (", round( lower_ci, digits = 2), ", ",
+			round( upper_ci, digits = 2), ")", sep = ""))
+
+# read in annual index output
+
+	index <- read.csv(paste(in.dir, site, ".", seas, ".AnnualIndices.", max.yr, ".csv", sep = ""))
+ 
+# if needing to remove extreme outliers for plotting
+	index$LCI.bt <- ifelse(index$sd.bt >= 4, 0, index$LCI.bt)
+	index$UCI.bt <- ifelse(index$sd.bt >= 4, 0, index$UCI.bt)
+	
+	index <- index %>%
+	  filter(!is.na(SpeciesCode) & period == "all years") %>%
+	  #dplyr::select(index.bt, lower_ci.bt, upper_ci.bt,
+	  dplyr::select(index.bt, LCI.bt, UCI.bt,
+	         SpeciesCode, year, season, area_code, model, species_id, sort_order, 
+    english_name, french_name)
+	
+# merge the two
+
+#	sp.trnd[,'species_id']<-factor(sp.trnd[,'species_id'])
+	
+  plot.dat <- full_join(index, sp.trnd, by = c("area_code", "SpeciesCode", "species_id", "sort_order", "english_name", "french_name"))
+  
+	plot.dat <- plot.dat[order(plot.dat$sort_order),]
+
+
+  min.yr.filt <- ifelse(is.na(min.yr.filt), min(as.numeric(plot.dat$year)), min.yr.filt)
+  max.yr.filt <- ifelse(is.na(max.yr.filt), max(as.numeric(plot.dat$year)), max.yr.filt)
+
+# since max year in database might be greater than the max year we want to analyze, second filter
+
+  max.yr.filt <- ifelse(max.yr.filt > max.yr,  max.yr, max.yr.filt)
+
+ 
+# following is so that order of plots is correct
+  plot.dat$sp.trnd <- factor(plot.dat$sp.trend, levels=unique(plot.dat$sp.trend))
+  plot.dat <- subset(plot.dat, !is.na(year))
+  plot.dat<-subset (plot.dat, !is.na(sp.trnd))
+  
+sp.list <- as.character(unique(plot.dat$SpeciesCode))
+
+ 
+out.plot <- NULL
+  i <- 1
+  j <- 6
+
+  for(t in 1:(ceiling(length(sp.list)/6))) {
+
+  out.plot[[t]] <- ggplot(data = subset(plot.dat, SpeciesCode %in% sp.list[i:j]), aes(x = as.numeric(year), y = index.bt)) +
+	facet_wrap(~ sp.trend, ncol = 2, scales = "free", as.table = TRUE) +
+	geom_pointrange(aes(ymin = LCI.bt, ymax = UCI.bt, width =1), size = 0.4) +
+	geom_smooth(aes(ymin = LCI.bt, ymax = UCI.bt), method = "loess",
+		size = 0.5, alpha = 0.1) + #linetype = "blank", 
+	theme_bw() +
+	xlab("Year") +
+	ylab("Annual Index") +
+  scale_y_continuous(trans="log10") +
+  scale_x_continuous(breaks = seq(from = min.yr.filt, to = max.yr.filt, by = 4)) +
+	scale_shape_manual(values = c(1,2)) +
+	theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+	theme(legend.position = "none")
+
+  i <- i + 6
+  j <- j + 6
+  }
+
+  length(out.plot)
+# Plot to PDF file
+  pdf(paste(out.dir, site, ".", name, ".", seas, ".IndexPlot.pdf", sep=""),
+	height = 10, width = 8, paper = "letter")
+  try(print(out.plot[[1]]), silent = T)
+  try(print(out.plot[[2]]), silent=T)
+  try(print(out.plot[[3]]), silent = T)
+  try(print(out.plot[[4]]), silent = T)
+  try(print(out.plot[[5]]), silent = T)
+  
+  while(!is.null(dev.list())) dev.off()
+
+ } # end site and species loop 
+
+```
+

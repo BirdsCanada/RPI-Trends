@@ -1,0 +1,290 @@
+---
+title: "RPI_Plot"
+author: "Danielle Ethier"
+date: "3/20/2020"
+output: html_document
+---
+
+
+#station coverage plots
+
+```{r load packages, echo = FALSE, message = FALSE}
+
+require(INLA)		# for analyzing data
+require(reshape) 	# for summarizing/reshaping data
+require(dplyr)# for summarizing data (better than reshape for most things)
+require(doBy)
+require(lattice)
+require(ggplot2)
+require(lubridate)
+
+```
+
+
+```{r set directory, echo = FALSE, message = FALSE}
+
+# directory to post plots
+  in.dir <- "I:/r-functions/work/rpi/TrendAnalysis/output/2019/"
+  out.dir <- "I:/r-functions/work/rpi/TrendAnalysis/plots/stationCoverage/"
+  
+# read in list of sites/seasons to analyze
+  anal.param <- read.csv("I:/r-functions/work/rpi/TrendAnalysis/Data/RPI_Analysis_Parameters.csv")
+
+```
+
+## Including Plots
+
+Plot using raw data the station coverage plots
+
+```{r Data Manip and plotting, echo = FALSE, message = FALSE}
+
+ for(i in 1:nrow(anal.param)){  # loop through sites and seasons
+
+   #for testing
+   i<-48
+
+
+ site <- as.character(anal.param[i, "SiteCode"])
+ 
+
+ sites = NA #c("HawkCount-389","HawkCount-625") # vector, if there are more than 1 site to combine.
+
+ seas <- as.character(anal.param[i,"seas"])
+ min.yr.filt <- anal.param[i,"min.yr.filt"]
+ max.yr.filt <- anal.param[i,"max.yr.filt"]
+
+############################################################################
+# READ IN DATA AND MANIPULATE - SITE AND SEASON SPECIFIC
+
+  in.data <- read.csv(paste(in.dir, site, ".", seas, ".raw.csv", sep = ""))
+  in.data <- subset(in.data, !is.na(datetime))
+ #in.data$datetime <- as.POSIXct(in.data$datetime)
+  
+  #since the dates are in different formates they need to be made the same before proceeding. 
+  in.data$date<-parse_date_time(in.data$datetime, orders = c('ymdHMS','mdHMS', 'mdyHS'), truncate=4)
+
+  
+  in.data$year <- as.POSIXlt(in.data$date)$year + 1900
+  in.data$doy <- as.POSIXlt(in.data$date)$yday
+  in.data$hour <- as.POSIXlt(in.data$date)$h
+
+  obsDays <- unique(subset(in.data, select = c("year", "doy")))
+  obsDays <- summaryBy(doy ~ year, data = obsDays, FUN = c(length, min, max))
+
+
+# calculate number of observation hours/day
+
+  obsHours <- unique(subset(in.data, select = c("year", "doy", "datetime", "hour")))
+
+  tmp <- summaryBy(datetime ~ year + doy, data = obsHours, FUN = length)
+  tmp <- summaryBy(datetime.length ~ year, data = tmp, FUN = c(mean, sd, var))
+
+  pdf(paste(out.dir, site, ".", seas, ".SamplingCoverPlot.pdf", sep=""),
+	height = 10, width = 8, paper = "letter")
+  par(mfrow = c(3, 1))
+  plot(doy.length ~ year, data = obsDays, 
+	ylab = "Number Days Sampled", xlab = "Year",
+	col = "black", pch = 20, cex = 1)
+  plot(doy.min ~ year, data = obsDays,
+	ylab = "Range of Dates Sampled",
+	xlab = "Year", ylim = c(min(obsDays$doy.min), max(obsDays$doy.max)),
+	col = c("black"), pch = c(20), cex = 1)
+	points(doy.max ~ year, data = obsDays,
+	col = "grey50", pch = 1, cex = 1)
+  plot(datetime.length.mean ~ year, data = tmp, 
+	ylab = "Mean # hours sampled/day", xlab = "Year",
+	col = "black", pch = 20, cex = 1)
+  dev.off()
+
+  } # end of i loop
+  
+
+
+```
+
+
+Plot using raw data the seasonal change in station plots over the years. i.e., systematic change in effort
+
+```{r PlottingDayCOverage, echo = FALSE, message = FALSE}
+
+out.dir <- "I:/r-functions/work/rpi/TrendAnalysis/plots/DayCoverage/"
+
+for(i in 1:nrow(anal.param)){  # loop through sites and seasons
+
+ #in 2019 the data for site row 46 did not download. It will therefore not import. Will need to restart the data loop once it crashed.   
+ for(i in 47:nrow(anal.param)){ 
+   #for testing
+   #i<-1
+
+
+ site <- as.character(anal.param[i, "SiteCode"])
+ name<-as.character(anal.param[i, "site"])
+
+ sites = NA #c("HawkCount-389","HawkCount-625") # vector, if there are more than 1 site to combine.
+
+ seas <- as.character(anal.param[i,"seas"])
+ min.yr.filt <- anal.param[i,"min.yr.filt"]
+ max.yr.filt <- anal.param[i,"max.yr.filt"]
+
+############################################################################
+# READ IN DATA AND MANIPULATE - SITE AND SEASON SPECIFIC
+
+  in.data <- read.csv(paste(in.dir, site, ".", seas, ".raw.csv", sep = ""))
+  in.data <- subset(in.data, !is.na(datetime))
+  #since the dates are in different formates they need to be made the same before proceeding. This will cause some warning "All formats failed to parse. No formats found" Ignore. 
+ 
+  in.data$date<-parse_date_time(in.data$datetime, orders = c('ymdHMS','mdHMS', 'mdyHS'), truncate=4)
+
+  in.data$year <- as.POSIXlt(in.data$date)$year + 1900
+  in.data$doy <- as.POSIXlt(in.data$date)$yday
+  in.data$hour <- as.POSIXlt(in.data$date)$h
+
+  obsDays <- unique(subset(in.data, select = c("year", "doy")))
+ 
+  ObsDays1 <-obsDays %>% group_by(year) %>% 
+    summarize (meanday = mean(doy), maxday = max(doy), minday=min(doy), SD= sd(doy)) %>%
+    ungroup()
+  
+  ObsDays2<-full_join(obsDays, ObsDays1, by="year")
+  ObsDays2$site<-site
+
+
+# calculate number of observation hours/day
+
+  pdf(paste(out.dir, site, ".", seas, ".DayCoveragePlot.pdf", sep=""),
+	height = 10, width = 8, paper = "letter")
+  par(mfrow = c(1, 1))
+  print(ggplot() + 
+  geom_pointrange(data=ObsDays2, mapping=aes(x=year, y=meanday, ymin=minday, ymax=maxday)) +
+  xlab("Year") +
+	ylab("Annual Index") +
+  ggtitle (site))
+  dev.off()
+  
+  } # end of i loop
+```
+
+## Including Plots
+
+Plot using raw data the station coverage plots
+
+```{r Data Manip and plotting, echo = FALSE, message = FALSE}
+
+ for(i in 1:nrow(anal.param)){  # loop through sites and seasons
+
+   #for testing
+   i<-48
+
+
+ site <- as.character(anal.param[i, "SiteCode"])
+ 
+
+ sites = NA #c("HawkCount-389","HawkCount-625") # vector, if there are more than 1 site to combine.
+
+ seas <- as.character(anal.param[i,"seas"])
+ min.yr.filt <- anal.param[i,"min.yr.filt"]
+ max.yr.filt <- anal.param[i,"max.yr.filt"]
+
+############################################################################
+# READ IN DATA AND MANIPULATE - SITE AND SEASON SPECIFIC
+
+  in.data <- read.csv(paste(in.dir, site, ".", seas, ".raw.csv", sep = ""))
+  in.data <- subset(in.data, !is.na(datetime))
+ #in.data$datetime <- as.POSIXct(in.data$datetime)
+  
+  #since the dates are in different formates they need to be made the same before proceeding. 
+  in.data$date<-parse_date_time(in.data$datetime, orders = c('ymdHMS','mdHMS', 'mdyHS'), truncate=4)
+
+  
+  in.data$year <- as.POSIXlt(in.data$date)$year + 1900
+  in.data$doy <- as.POSIXlt(in.data$date)$yday
+  in.data$hour <- as.POSIXlt(in.data$date)$h
+
+  obsDays <- unique(subset(in.data, select = c("year", "doy")))
+  obsDays <- summaryBy(doy ~ year, data = obsDays, FUN = c(length, min, max))
+
+
+# calculate number of observation hours/day
+
+  obsHours <- unique(subset(in.data, select = c("year", "doy", "datetime", "hour")))
+
+  tmp <- summaryBy(datetime ~ year + doy, data = obsHours, FUN = length)
+  tmp <- summaryBy(datetime.length ~ year, data = tmp, FUN = c(mean, sd, var))
+
+  pdf(paste(out.dir, site, ".", seas, ".SamplingCoverPlot.pdf", sep=""),
+	height = 10, width = 8, paper = "letter")
+  par(mfrow = c(3, 1))
+  plot(doy.length ~ year, data = obsDays, 
+	ylab = "Number Days Sampled", xlab = "Year",
+	col = "black", pch = 20, cex = 1)
+  plot(doy.min ~ year, data = obsDays,
+	ylab = "Range of Dates Sampled",
+	xlab = "Year", ylim = c(min(obsDays$doy.min), max(obsDays$doy.max)),
+	col = c("black"), pch = c(20), cex = 1)
+	points(doy.max ~ year, data = obsDays,
+	col = "grey50", pch = 1, cex = 1)
+  plot(datetime.length.mean ~ year, data = tmp, 
+	ylab = "Mean # hours sampled/day", xlab = "Year",
+	col = "black", pch = 20, cex = 1)
+  dev.off()
+
+  } # end of i loop
+  
+
+
+```
+
+
+Create output tables of station coverage date for David O. 
+
+```{r PlottingDayCOverage, echo = FALSE, message = FALSE}
+  
+  in.dir <- "I:/r-functions/work/rpi/TrendAnalysis/output/2019/"
+  out.dir <- "I:/r-functions/work/rpi/TrendAnalysis/plots/2019/stationCoverage/"
+
+for(i in 1:nrow(anal.param)){  # loop through sites and seasons
+
+#in 2019 the data for site row 46 did not download. It will therefore not import. Will need to restart the data loop once it crashed.   
+#for(i in 47:nrow(anal.param)){ 
+   #for testing
+   #i<-1
+
+
+ site <- as.character(anal.param[i, "SiteCode"])
+ name<-as.character(anal.param[i, "site"])
+
+ sites = NA #c("HawkCount-389","HawkCount-625") # vector, if there are more than 1 site to combine.
+
+ seas <- as.character(anal.param[i,"seas"])
+ min.yr.filt <- anal.param[i,"min.yr.filt"]
+ max.yr.filt <- anal.param[i,"max.yr.filt"]
+
+############################################################################
+# READ IN DATA AND MANIPULATE - SITE AND SEASON SPECIFIC
+
+  in.data <- read.csv(paste(in.dir, site, ".", seas, ".raw.csv", sep = ""))
+  in.data <- subset(in.data, !is.na(datetime))
+
+#since the dates are in different formates they need to be made the same before proceeding. This will cause some warning "All formats failed to parse. No formats found" Ignore. 
+ 
+  in.data$date<-parse_date_time(in.data$datetime, orders = c('ymdHMS','mdHMS', 'mdyHS'), truncate=4)
+
+  in.data$year <- as.POSIXlt(in.data$date)$year + 1900
+  in.data$doy <- as.POSIXlt(in.data$date)$yday
+  in.data$hour <- as.POSIXlt(in.data$date)$h
+
+  obsDays <- unique(subset(in.data, select = c("year", "doy")))
+ 
+  
+# calculate number of observation hours/day
+obsHours <- unique(subset(in.data, select = c("year", "doy", "datetime", "hour")))
+
+  tmp <- summaryBy(datetime ~ year + doy, data = obsHours, FUN = length)
+  tmp <- summaryBy(datetime.length ~ year, data = tmp, FUN = c(mean, sd, var))
+  
+  write.csv(obsDays, file = paste(out.dir, site, ".", seas, ".ObservationDays.csv", sep = ""), row.names = FALSE)
+ 
+  write.csv(tmp, file = paste(out.dir, site, ".", seas, ".HoursSampled.csv", sep = ""), row.names = FALSE)
+  
+     } # end of i loop
+```

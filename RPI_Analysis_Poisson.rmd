@@ -1,0 +1,489 @@
+---
+title: "RPI Analysis"
+author: "Tara L. Crewe"
+date: "January, 2017"
+output: html_document
+---
+
+Code to analyze Raptor Population Index (RPI) hourly and daily counts.  Data are analyzed by looping through 1) sites/season; 2) species, 3) year periods (10, 20, 30+ years).
+
+```{r load packages, echo = FALSE, message = FALSE}
+
+require(INLA)		# for analyzing data
+require(reshape) 	# for summarizing/reshaping data
+require(dplyr)  # for summarizing data (better than reshape for most things)
+
+# function to call in various analysis functions that draw on the BMDE database
+source("I:/R-functions/functions.r")
+
+# Source other required R Scripts
+source("./Scripts/rpi.a.ImportData.R")
+source("./Scripts/rpi.b.DataManip.R") # also filters station coverage.
+source("./Scripts/rpi.b.DataManipHourly.R") # also filters station coverage.
+source("./Scripts/rpi.c.DailyWindows.R")
+source("./Scripts/rpi.d.SeasonalWindows.R")
+source("./Scripts/rpi.e.FilterNyears.R")
+source("./Scripts/rpi.f.MigrationWindowSummary.R")
+
+```
+
+```{r set common parameters among sites, echo = FALSE, message = FALSE}
+
+# Set max year to analyze *** CHANGE EVERY UPDATE
+max.yr <- 2016  
+
+# output directory for all analysis output files
+out.dir <- paste("I:/r-functions/work/rpi/TrendAnalysis/output/", max.yr, "/", sep = "")
+
+# create output directory if it does not exist
+dir.create(out.dir, showWarnings=FALSE, recursive=TRUE)
+
+# Create directory for sql files, which are used by Denis to create web output
+dir.create(paste(out.dir, "sql_scripts", sep = ""), showWarnings=FALSE, recursive=TRUE)
+
+# get list of species common names, to be used later
+sp.names <- subset(bscdata.getSpeciesTable(datasource="bmdedata", authority = "rpi", showall=FALSE, sortorder=1), select = c("species_code","sort_order", "english_name", "scientific_name", "french_name"))
+
+write.manip.data = FALSE # write manipulated data to file?
+filter.day = TRUE		# filter by daily migration windows?
+day.pctile1 = 2.5		# if filter.day = TRUE, lower percentile
+day.pctile2 = 97.5		# if filter.day = TRUE, upper percentile
+write.daily.windows = TRUE	# if filter.day = TRUE, write daily windows (start/end hour) to file
+filter.seas = TRUE		# Filter by seasonal windows?
+filter.years = TRUE 		# filter data by min and max years
+seas.pctile1 = 2.5		# if filter.seas = TRUE, lower percentile
+seas.pctile2 = 97.5		# if filter.seas = TRUE, upper percentile
+write.windows = TRUE		# if filter.seas = TRUE, write seasonal windows to file?
+center.var = TRUE		# center date variables prior to analysis?
+doy.k = 4			# for GAM model, start number nodes for day
+time.k = 4			# for GAM model, start number nodes for year
+results.code = "RPI"
+weight.var = "DurationInHours"
+yr.incr = 10  			# increment for automatically generated time periods
+write.indices = TRUE		# write estimated annual indices to file?
+write.trends = TRUE		# write estimated trends to file?
+write.mig.wind = TRUE		# write data to calculate migration windows to file?
+write.plot = TRUE		# write migration window plots to file?
+station.pctile1 = 2.5
+station.pctile2 = 97.5
+write.indices.sql = TRUE
+write.trends.sql = TRUE
+write.mig.wind.sql = TRUE
+```
+
+```{r set site specific parameters, echo = FALSE, message = FALSE}
+
+# Read in Analysis Parameters File to get list of sites to analyze; contains site code, site name, seasons and sometimes years to analyze
+anal.param <- read.csv("./data/RPI_Analysis_Parameters_RLHA.csv")
+anal.param <- subset(anal.param, data.type == "hourly")
+
+```
+
+```{r analyze, echo = FALSE}
+
+# LOOP THROUGH ROWS IN anal.param, OR JUST SPECIFY EACH AND RUN MANUALLY
+# Each row is a separate site AND season (i.e., sites that count both seasons are in two rows)
+
+for(i in 1:nrow(anal.param)){  # loop through sites and seasons 
+#for(i in 5:5){  # loop through sites and seasons 
+  
+site <- as.character(anal.param[i, "SiteCode"])
+data.type <- as.character(anal.param[i, "data.type"])
+
+print(paste("analyzing site: ", site, sep = ""))
+
+sites = NA #c("HawkCount-389","HawkCount-625") # vector, if there are more than 1 site to combine.
+
+seas <- as.character(anal.param[i,"seas"])
+min.yr.filt <- anal.param[i,"min.yr.filt"]
+max.yr.filt <- anal.param[i,"max.yr.filt"]
+
+# SET-UP TEXT and SQL OUTPUT FILES FOR INDICES AND TRENDS 
+
+# Create text file for trends
+# Note that trends for all periods will be in the same text file
+
+trends.txt <- as.data.frame(matrix(data = NA, nrow = 1, ncol = 23, byrow = FALSE, dimnames = NULL))
+
+names(trends.txt) <- c("SpeciesCode", "mean", "sd", "lcl", "mid", "ucl", "mode", "kld", "trnd", "lower_ci", "upper_ci", "post_prob", "years","period", "season", "results_code", "area_code", 
+"model_type", "trnd_order", "species_id","sort_order", "english_name", "french_name") 
+
+write.table(trends.txt, file = paste(out.dir, site, ".", seas, ".Trends.", max.yr, ".csv", sep = ""), row.names = FALSE, append = FALSE, quote = FALSE, sep = ",")
+
+# Create text file for annual indices derived from trend model
+trends.txt <- as.data.frame(matrix(data = NA, nrow = 1, ncol = 23, 	byrow = FALSE, dimnames = NULL))
+names(trends.txt) <-  c("SpeciesCode","mean.log","median.log","LCI.log","UCI.log", "sd.log", "mean.bt", "median.bt", "LCI.bt", "UCI.bt", "sd.bt", "years", "year", "period", "season", "results_code", "area_code", "model", "trnd_order", "species_id", "sort_order", "english_name", "french_name") 
+
+write.table(trends.txt, file = paste(out.dir, site, ".", seas, ".Indices_TrendModel.", max.yr, ".csv", sep = ""), row.names = FALSE, append = FALSE, quote = FALSE, sep = ",")
+
+# Create text file for annual indices derived from index model (year categorical)
+
+indices.txt <- as.data.frame(matrix(data = NA, nrow = 1, ncol = 19, byrow = FALSE, dimnames = NULL))
+  
+names(indices.txt) <- c("SpeciesCode", "index", "stdev", "lower_ci", "mid_ci", "upper_ci", "mode", "kld", "year", "years", "period", "season", "model_type", "results_code", "area_code", "species_id", "sort_order", "english_name", "french_name")  
+
+write.table(indices.txt, file = paste(out.dir, site, ".", seas, ".AnnualIndices.", max.yr, ".csv", sep = ""), row.names = FALSE, append = FALSE, quote = FALSE, sep = ",")
+
+# Create text file for migration window summary
+
+windowSumm.txt <- as.data.frame(matrix(data = NA, nrow = 1, ncol = 12, byrow = FALSE, dimnames = NULL))
+
+names(windowSumm.txt) <- c("SpeciesCode", "doy", "abundance", "proportions", "nyears", "month", "day", "species_id", "results_code", "area_code", "period", "season")  
+
+write.table(windowSumm.txt, file = paste(out.dir, site, ".", seas, ".MigrationWindowSummary.", max.yr, ".csv", sep = ""), row.names = FALSE, append = FALSE, quote = FALSE, sep = ",")
+
+# DOWNLOAD DATA FROM SERVER - SITE AND SEASON SPECIFIC
+# Read data from server and write to file: OUTPUTS RAW DATA FILES TO DIRECTORY SPECIFIED.  Could put this elsewhere - loop through and save data for all sites to specified folder; then other manipulation/checks could be run as well.
+# This also filters bad dates using the bscdata.filterBadDates(in.data, project=1013) function
+
+read.data(site = site, sites = sites, out.dir = out.dir, data.type = data.type)
+
+# READ IN DATA AND MANIPULATE - SITE AND SEASON SPECIFIC
+
+in.data <- NULL
+in.data <- read.csv(paste(out.dir, site, ".", seas, ".raw.csv", sep = ""))
+in.data <- filter(in.data, !is.na(datetime))
+in.data$datetime <- as.POSIXct(in.data$datetime)
+in.data$year <- as.POSIXlt(in.data$datetime)$year + 1900
+in.data$doy <- as.POSIXlt(in.data$datetime)$yday
+
+## with(in.data, table(year, DurationInHours)) # hourly or daily?
+
+# check distribution of observations across years - might point out years that weren't sampled often enough, and might possibly need to be dropped from analysis
+##  plot(summaryBy(ObservationCount ~ year, data = in.data, FUN = length))
+##  print(summaryBy(ObservationCount ~ year, data = in.data, FUN = length))
+
+# DATA MANAGEMENT - SITE AND SEASON SPECIFIC
+# drop years where necessary (eg., last year in dataset might not be completely entered or perhaps based on what years were analyzed previously. Assign max year as what is listed in anal.param, or maximum year in database
+
+# if no reason to drop any years at beginning (in anal.param), use min year in dataframe
+  min.yr.filt <- ifelse(is.na(min.yr.filt), min(in.data$year), min.yr.filt)
+  max.yr.filt <- ifelse(is.na(max.yr.filt), max.yr, max.yr.filt)
+
+if(filter.years) {
+	in.data <- filter(in.data, year >= min.yr.filt & year <= max.yr.filt)
+  } # end of if filter years
+
+print("year range:"); print(range(in.data$year))
+
+if(max(in.data$year) == max.yr) { #continue only if the max year in database is what it should be
+
+# DATA.MANIP function
+# includes filtering station, daily and seasonal windows (auto-generated).  Also amalgamated hourly data into daily totals.  Note that for daily data, daily migration windows are not filtered.  Assumes consistent hours sampled each day
+
+manip.dat <- data.manip.hourly(in.data = in.data, site = site, out.dir = out.dir,	write.manip.data = write.manip.data, seas = seas, station.pctile1 = station.pctile1, station.pctile2 = station.pctile2, day.pctile1 = day.pctile1, day.pctile2 = day.pctile2, write.daily.windows = write.daily.windows, seas.pctile1 = seas.pctile1, seas.pctile2 = seas.pctile2, write.windows = write.windows, data.type = data.type)
+
+min.yrs.detect = (max.yr.filt-min.yr.filt)/2 # number of years a species must be detected on to be analyzed
+
+# AUTO-GENERATE TIME PERIODS TO ANALYZE TRENDS
+
+time.period = NA
+Y1.trend = NA
+Y2.trend = NA
+
+# if the time periods are not provided, generate all-years and 10 year periods.
+
+if (is.na(time.period)) {
+   endyr <- max.yr.filt
+   startyr <- min.yr.filt
+
+   Y1.trend <- startyr
+   Y2.trend <- endyr
+   time.period <- "all years"
+
+   k <- 1
+   while (endyr - (k * yr.incr) > startyr) {
+      Y1.trend <- c(Y1.trend, endyr - (k * yr.incr))
+      Y2.trend <- c(Y2.trend, endyr)
+      time.period <- c(time.period, paste((k * yr.incr), "-years", sep=""))
+      k <- k + 1
+   } # end of while loop
+   } # end of time period loop
+
+# check how many species were in dataset before year filter:
+
+print(paste("Number species before yr filter: ", length(unique(manip.dat$SpeciesCode)), sep = ""))
+  
+print(as.character(unique(manip.dat$SpeciesCode)))
+
+print(paste("number years in dataset: ", (length(unique(manip.dat$year))+ 1),
+	sep = ""))
+
+print(paste("suggested min.yrs: ", round((length(unique(manip.dat$year)) + 1)/2)),
+	sep = "")
+
+# DROP SPECIES THAT AREN'T DETECTED DURING SPECIFIED NUMBER OF YEARS
+
+manip.dat <- droplevels(filter.nyrs(in.data = manip.dat, min.yrs.detect = min.yrs.detect))
+
+# check how many species after filter
+
+print(paste("Number species after yr filter: ", length(unique(manip.dat$SpeciesCode)), sep = ""))
+  
+print(as.character(unique(manip.dat$SpeciesCode)))
+
+# DROP SPECIES THAT AREN'T DETECTED with mean 10 individuals per year.
+
+tmp <- group_by(manip.dat, SpeciesCode, year) %>%
+	summarise( 
+	mean.count = mean(ObservationCount/DurationInHours), 
+	max.count = max(ObservationCount),
+	tot.count = sum(ObservationCount)) %>%
+ 	summarise( 
+	mean.mncount = mean(mean.count), 
+	max.mxcount = mean(max.count),
+	mean.totcount = mean(tot.count))
+
+sp.list <- subset(tmp$SpeciesCode, tmp$mean.totcount >= 10)
+  
+manip.dat <- droplevels(filter(manip.dat, SpeciesCode %in% sp.list))
+
+# ANALYZE DATA - SITE, SEASON, and SPECIES SPECIFIC; LOOPING THROUGH SPECIES
+
+sp.list <- unique(manip.dat$SpeciesCode)
+
+for(j in 1:length(sp.list)) {
+ # for(j in 4:length(sp.list)) {
+
+  print(paste("analyzing Species: ", sp.list[j], sep = ""))
+
+# Center year variables, and create polynomial terms for doy
+# note that centering doy and year variables had very little
+# impact on 96-06 trends for Beamer.
+
+  sp.dat <- subset(manip.dat, SpeciesCode == sp.list[j])
+  sp.dat$yearfac <- as.factor(sp.dat$year - min(sp.dat$year) + 1)
+
+  sp.dat$c.yearfac <- as.factor(sp.dat$year - 
+	trunc(sum(range(sp.dat$year))/2))
+  sp.dat$c.year <- sp.dat$year - trunc(sum(range(sp.dat$year))/2)
+
+  sp.dat$doy1 <- poly(sp.dat$doy, 2)[,1]
+  sp.dat$doy2 <- poly(sp.dat$doy, 2)[,2]
+  sp.dat$doyfac <- as.factor(sp.dat$doy - min(sp.dat$doy) + 1)
+  sp.dat$f.year <- as.factor(sp.dat$year)
+
+# remove negative weights (problem with start and end time)
+  sp.dat <- subset(sp.dat, DurationInHours > 0)
+
+# MODEL FORMULAS
+
+  trend.formula <- ObservationCount ~ c.year + doy1 + doy2 + 
+		f(yearfac, model = "ar1") + f(doyfac, model = "iid")
+  index.formula <- ObservationCount ~ f.year - 1 + doy1 + doy2 + 
+		f(yearfac, model = "ar1") + f(doyfac, model = "iid")
+
+
+# TRENDS: SPECIFIC TO SITE, SEASON, SPECIES, and TIME PERIOD
+# LOOP THROUGH TIME PERIODS
+
+  for(t in 1:length(time.period)) {
+     # for(t in 3:length(time.period)) {
+
+  print(paste("time.period: ", time.period[t], sep = " "))
+
+  period <- time.period[t]
+  Y1 <- Y1.trend[t]
+  Y2 <- Y2.trend[t]
+
+  tmp.dat <- subset(sp.dat, year %in% c(Y1:Y2))
+	
+  		trend <- index <- data.model <- NULL  # clear results and replace with Poisson
+
+  		data.model <- "Poisson" 
+
+  		trend <- try(inla(trend.formula, family = "poisson", data = tmp.dat, E = DurationInHours,
+			control.predictor = list(compute = TRUE), control.compute = list(config = TRUE))) #, dic = TRUE))
+
+
+	if(!is.null(trend)) {
+
+	# Calculate posterior probability that trend is negative
+
+	post_year <- trend$marginals.fixed$c.year
+	sample <- inla.rmarginal(10000, post_year)
+  	post_prob <- length(sample[sample < 0])/length(sample) 
+
+	# Output trend info  
+
+  	trend.out <- NULL
+  	trend.out <- as.data.frame(t(summary(trend)$fixed["c.year",]))
+  	names(trend.out) <- c("mean", "sd", "lcl", "mid", "ucl", "mode", "kld")
+ 	trend.out$trnd <- 100*(exp(trend.out$mean)-1)
+  	trend.out$lower_ci <- 100*(exp(trend.out$lcl)-1)
+  	trend.out$upper_ci <- 100*(exp(trend.out$ucl)-1)
+  	trend.out$post_prob <- round(ifelse(trend.out$trnd <= 0, post_prob, 1-post_prob), digits = 2)
+  	trend.out$SpeciesCode <- sp.list[j]
+	trend.out$years <- paste(Y1, "-", Y2, sep = "")
+	trend.out$period <- period
+  	trend.out$season <- seas
+  	trend.out$results_code <- results.code
+  	trend.out$area_code <- site
+  	trend.out$model_type <- data.model
+  	trend.out$trnd_order <- NA
+  	trend.out$species_id <- bscdata.getSpeciesID(datasource="bmdedata", authority = "RPI", spcodes = sp.list[j], aggregate=TRUE)[[2]]
+      trend.out <- merge(trend.out, subset(sp.names, select = c("species_code", "sort_order",
+		"english_name", "french_name")), by.x = "SpeciesCode", by.y = "species_code",
+		all.x = TRUE)
+
+	# Calculate abundance indices using the trend model
+
+  	nsamples <- 1000
+	nyears <- length(unique(tmp.dat$year))
+ 	post.samp1 <- NULL # clear previous
+  	post.samp1 <- inla.posterior.sample(nsamples, trend)
+  	tmp1 <- subset(tmp.dat, select = c("SpeciesCode", "year", "doy", "ObservationCount"))
+ 
+	# For each sample from the posterior, want to join predicted to tmp (so predicted lines up with doy/year in real data)
+	# and get mean count by year
+  	pred.yr.log <- matrix(nrow = nsamples, ncol = nyears)
+  	pred.yr.bt <- matrix(nrow = nsamples, ncol = nyears)
+  	for(k in 1:nsamples) {
+  	tmp1$pred.log <- post.samp1[[k]]$latent[1:nrow(tmp.dat)]
+  	tmp1$pred.bt <- exp(tmp1$pred.log)
+  	pred.yr.log[k,] <- t(with(tmp1, aggregate(pred.log, list(year = year), mean, na.action = na.omit))$x)
+  	pred.yr.bt[k,] <- t(with(tmp1, aggregate(pred.bt, list(year = year), mean, na.action = na.omit))$x)
+  	}
+ 
+	# Then want to get Mean, Median and confidence intervals for each year
+
+      mn.yr1 <- NULL
+ 	mn.yr1 <- matrix(nrow = nyears, ncol = 10)
+  	for(g in 1:nyears) {
+  	mn.yr1[g,1] <- mean(pred.yr.log[,g], na.rm = TRUE)
+  	mn.yr1[g,2] <- median(pred.yr.log[,g], na.rm = TRUE)
+  	mn.yr1[g,3] <- quantile(pred.yr.log[,g], 0.025, na.rm = TRUE)
+  	mn.yr1[g,4] <- quantile(pred.yr.log[,g], 0.975, na.rm = TRUE)
+  	mn.yr1[g,5] <- sd(pred.yr.log[,g], na.rm = TRUE)
+  	mn.yr1[g,6] <- mean(pred.yr.bt[,g], na.rm = TRUE)
+  	mn.yr1[g,7] <- median(pred.yr.bt[,g], na.rm = TRUE)
+  	mn.yr1[g,8] <- quantile(pred.yr.bt[,g], 0.025, na.rm = TRUE)
+  	mn.yr1[g,9] <- quantile(pred.yr.bt[,g], 0.975, na.rm = TRUE)
+  	mn.yr1[g,10] <- sd(pred.yr.bt[,g], na.rm = TRUE)
+  	}
+
+      mn.yr1 <- as.data.frame(mn.yr1)
+      names(mn.yr1) <- c("mean.log", "median.log", "LCI.log", "UCI.log", "sd.log",
+		"mean.bt", "median.bt", "LCI.bt", "UCI.bt", "sd.bt")
+ 	mn.yr1$SpeciesCode <- sp.list[j]
+	mn.yr1$years <- paste(Y1, "-", Y2, sep = "")
+	mn.yr1$year <- sort(unique(tmp.dat$year))
+	mn.yr1$period <- period
+  	mn.yr1$season <- seas
+  	mn.yr1$results_code <- results.code
+  	mn.yr1$area_code <- site
+  	mn.yr1$model_type <- data.model
+  	mn.yr1$trnd_order <- NA
+  	mn.yr1$species_id <- bscdata.getSpeciesID(datasource="bmdedata", authority = "RPI", spcodes = sp.list[j], aggregate=TRUE)[[2]]
+      mn.yr1 <- merge(mn.yr1, subset(sp.names, select = c("species_code", "sort_order",
+		"english_name", "french_name")), by.x = "SpeciesCode", by.y = "species_code",
+		all.x = TRUE)
+
+  if (write.trends) {
+
+	write.table(trend.out, file = paste(out.dir, site, ".", seas, ".Trends.",
+		max.yr, ".csv", sep = ""), row.names = FALSE, append = TRUE, 
+		quote = FALSE, sep = ",", col.names = FALSE)
+
+	write.table(mn.yr1, file = paste(out.dir, site, ".", seas, ".Indices_TrendModel.",
+		max.yr, ".csv", sep = ""), row.names = FALSE, append = TRUE, 
+		quote = FALSE, sep = ",", col.names = FALSE)
+
+  } # end of write.out statement
+
+  if(write.trends.sql) {
+
+  	sql.temp <- subset(trend.out, select = c("trnd", "upper_ci", "lower_ci",
+		"post_prob", "area_code", "season", "model_type","results_code", "period", "years", "species_id"))
+      sql.temp$area_code <- gsub("HawkCount-", "", sql.temp$area_code)
+	bscdata.sqlSave(tablename = "results_trends",
+		df = sql.temp, textfile = paste(out.dir, "sql_scripts/", site, "_", seas, "_results_trends.sql",
+		sep = ""), append = T, savetable = F, datasource = NA)
+
+	if(period == "all years") { 
+	  
+  sql.temp <- subset(mn.yr1, select = c("mean.log", "sd.log", "LCI.log", "UCI.log",
+ 	"years", "year", "season", "results_code", "area_code", "species_id"))
+  	names(sql.temp) <- c("index", "stdev", "lower_ci", "upper_ci",
+ 	"years", "year", "season", "results_code", "area_code", "species_id")
+      sql.temp$area_code <- gsub("HawkCount-", "", sql.temp$area_code)
+  	bscdata.sqlSave(tablename = "results_annual_logIndex",
+		df = sql.temp, textfile = paste(out.dir, "sql_scripts/", site, "_", seas, "_results_annual_logIndex.sql", sep = ""),
+		append = T, savetable = F, datasource = NA)
+
+  sql.temp <- subset(mn.yr1, select = c("mean.bt", "sd.bt", "LCI.bt", "UCI.bt",
+ 	"years", "year", "season", "results_code", "area_code", "species_id"))
+  	names(sql.temp) <- c("index", "stdev", "lower_ci", "upper_ci",
+ 	"years", "year", "season", "results_code", "area_code", "species_id")
+      sql.temp$area_code <- gsub("HawkCount-", "", sql.temp$area_code)
+  	bscdata.sqlSave(tablename = "results_annual_btIndex",
+		df = sql.temp, textfile = paste(out.dir, "sql_scripts/", site, "_", seas, "_results_annual_btIndex.sql", sep = ""),
+		append = T, savetable = F, datasource = NA)
+  	
+	} # end of if time.period statement
+      } # end of if write sql statement
+
+  } # end of if trends = NULL statement
+
+  } # end of time period loop
+
+# ANNUAL INDICES: GENERATED FOR FULL TIME PERIOD ONLY
+# SPECIFIC TO SITE, SEASON, SPECIES (outside time period loop)
+# use same data distribution as for trends
+
+  index <- NULL
+  index <- try(inla(index.formula, family = "poisson", data = sp.dat, E = DurationInHours,
+		control.predictor = list(compute = TRUE)) )
+
+  # OUTPUT ANNUAL INDEX INFO
+  if(!is.null(index)) {
+  index.out <- NULL
+  index.out <- as.data.frame(summary(index)$fixed)
+  index.out$year <- gsub("f.year", "", rownames(index.out))
+  index.out <- subset(index.out, year != "doy1" & year != "doy2")
+  names(index.out)[1:5] <- c("index", "stdev", "lower_ci", "mid_ci", "upper_ci")
+  index.out$SpeciesCode <- sp.list[j]
+  index.out$years <- paste(min(sp.dat$year), "-", max(sp.dat$year), sep = "")
+  index.out$period <- "all years"
+  index.out$season <- seas
+  index.out$model_type <- data.model
+  index.out$results_code <- results.code
+  index.out$area_code <- site
+  index.out$species_id <- bscdata.getSpeciesID(datasource="bmdedata", authority = "RPI", spcodes = sp.list[j], aggregate=TRUE)[[2]]
+  index.out <- merge(index.out, subset(sp.names, select = c("species_code", "sort_order",
+		"english_name", "french_name")), by.x = "SpeciesCode", by.y = "species_code",
+		all.x = TRUE)
+
+   if (write.indices) {
+
+  write.table(index.out, file = paste(out.dir, 
+	site, ".", seas, ".AnnualIndices.", max.yr, ".csv", sep = ""), 
+	row.names = FALSE, append = TRUE, quote = FALSE, sep = ",", col.names = FALSE)
+
+  } # end of write.out statement
+
+  if(write.indices.sql) {
+
+  sql.temp <- subset(index.out, select = c("index", "stdev", "lower_ci", "upper_ci",
+ 	"year", "season", "period", "results_code", "area_code", "species_id"))
+      sql.temp$area_code <- gsub("HawkCount-", "", sql.temp$area_code)
+  	bscdata.sqlSave(tablename = "results_annual_indices",
+		df = sql.temp, textfile = paste(out.dir, "sql_scripts/", site, "_", seas, "_results_annual_indices.sql", sep = ""),
+		append = T, savetable = F, datasource = NA)
+
+      } # end of if write sql statement
+  } # end of is.null indices statement
+
+  } # end of species loop
+
+# OUTPUT DATA TO PLOT MIGRATION WINDOW SUMMARY
+
+  mig.window.table(in.data = manip.dat, site = site,
+	out.dir = out.dir, seas = seas, sp.list = sp.list, results.code = results.code,
+	write.mig.wind = write.mig.wind, write.mig.wind.sql = write.mig.wind.sql)
+
+} # end of site/season loop
+} # end of if max.year statement.
+
+# area_name <- gsub("HawkCount: ", "", bscdata.listBMDECollections(collections=site, showall=T)[1,]$collection_name)
+```
