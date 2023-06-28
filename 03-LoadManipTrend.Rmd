@@ -1,14 +1,16 @@
----
-output: html_document
+# Trends
+
+```{r tidyr3, echo = FALSE, message = FALSE, warning = FALSE}
+
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=50), tidy = FALSE)
 editor_options: 
   chunk_output_type: console
----
-#Trends
+```
 
-Version: May 17 2023
-Author: Danielle
+These scripts set up the data for each site, run the seasonal species-specific analysis, and plot the output for review. Most of the heavy lifting is done in the background. However, if something breaks or doesn't work, the analysis may haul. 
 
-##Setup
+## Setup
 
 The setup files will get you ready for your analysis. It loads you libraries, needed tables, created directories for your outputs, and assigns some parameter values. 
 
@@ -16,12 +18,12 @@ Also assign max year of the analysis. Generally, the data in NatureCounts are 2 
 
 ```{r setup}
 
-max.year <- 2021 #needs changes with each analysis
+max.yr <- 2022 #needs changes with each analysis
 ID<- "dethier" #change this to your user ID. You will be prompted for a password. 
 
 ```
 
-## Choose your CMMN station {#Setup3.1}
+## Choose your CMMN station 
 
 The number assigned to `t` will correspond to the row in the analysis parameters file ('anal.param') you want to analyze (each site has a separate row).
 
@@ -30,21 +32,25 @@ View the file to identify the row you want to select
 
 ## Import site-specific analysis parameters 
 ##This will need checked and updated before each analysis
-anal.param <- read.csv("Data/CMMN_Analysis_ParameterValues.csv") 
+anal.param <- read.csv("Data/RPI_Analysis_Parameters.csv") 
+
+##Keep just the site number
+#anal.param$SiteCode<-as.numeric(gsub("HawkCount-", "", anal.param$SiteCode))
+
 View(anal.param)
 
 ```
 
-Select your station. 
+Select your station/season. 
 ```{r chooseSite}
 
-t <- 9
+t <- 1
 
 ```
 
-## Data manipulations {#Setup3.2}
+## Data manipulations 
 
-Now that you have selected the CMMN site, we are going to clean the data. The cleaning scripts do the following: 
+Now that you have selected the RPI site/ season, we are going to clean the data. The cleaning scripts do the following: 
 
   - Load the data from the naturecounts database. You will be prompted for your password. The code will first look to see if the data have been downloaded and stored. 
   - Subset data to min and max year based on analysis parameters file.
@@ -60,10 +66,8 @@ Now that you have selected the CMMN site, we are going to clean the data. The cl
 First, assign 'u' your NatureCounts username and run the `prepare` scripts.
 
 ```{r data manip}
-  
-ID<-"dethier" 
-source("i_prepare.R")
-source("ii_outputs.R")
+
+source("i_outputs.R")
 
 ```
 
@@ -80,7 +84,7 @@ From this point forward, we loop through species and season:
 
 ```{r Change Defaults}
 
-source("iii_analysis.R")
+source("ii_analysis.R")
 
 ```
 
@@ -88,7 +92,7 @@ source("iii_analysis.R")
 
 ```{r Change Defaults}
 
-source("iv_plot.R")
+source("iii_plot.R")
 
 ```
 

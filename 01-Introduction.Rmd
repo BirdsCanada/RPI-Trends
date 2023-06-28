@@ -1,4 +1,4 @@
-# Introduction 
+# Introduction
 
 ```{r tidyr1, echo = FALSE, message = FALSE, warning = FALSE}
 
@@ -7,18 +7,29 @@ opts_chunk$set(tidy.opts=list(width.cutoff=50), tidy = FALSE)
 
 ```
 
-## The Canadian Migration Monitoring Network - Réseau canadien de surveillance des migrations (CMMN-RCSM) 
+# Raptor Population Index
 
-The [Canadian Migration Monitoring Network (CMMN)](https://www.birdscanada.org/bird-science/canadian-migration-monitoring-network-cmmn) is a collaborative initiative of bird observatories across Canada, Birds Canada, and Environment and Climate Change Canada. The CMMN provides vital long-term information on bird demographics and population trends for more than 200 bird species, and contributes scientific data that advance the understanding of birds and other aspects of natural history in Canada.
+The Raptor Population Index [RPI](https://www.rpi-project.org/) is a collaborative effort to understand and share trends and conservation status of migratory raptors in North America, continent-wide and regionally. Each year thousands of people gather on ridgelines, coastlines, and other concentration points across the globe to watch migrating raptors during the fall and spring. This awe inspiring event provides a fun and accessible point of entry to bird watching and in-flight identification to the public, while also generating decades of standardized monitoring data from sites across North America. These count data also have value for those interested in the status and conservation of raptors.
 
-Through its members, the network also provides novel training and education opportunities to the public, increasing their knowledge and understanding of Canadian birds and their conservation.
+## Our Mission
 
-The CMMN aims to (1) generate high quality research and monitoring information on population trends, breeding and wintering areas, timing and routes of migration, stop-over sites and other aspects of avian ecology; and (2) influence bird conservation by making results readily accessible to member stations, the scientific community, wildlife managers and regulators, and the general public.
+The RPI Partnership between Hawk Migration Association of North America (HMANA), HawkWatch International, Hawk Mountain Sanctuary Association, and Birds Canada has a mission to contribute to the conservation, knowledge, and public understanding of raptors and raptor migration through a collaborative population monitoring program that produces conservation assessments and scientifically defensible population trends derived from counts of migrating raptors.
 
-Member observatories conduct annual standardized migration monitoring and other research on migratory birds and other wildlife, serve as a training ground for aspiring students, biologists and researchers, and engage in various outreach and education activities. 
+## Objectives
 
-Environment and Climate Change Canada provides critical support and resources to a number of member stations and to Birds Canada for its roles in data archiving and analysis. Many research projects are led by or involve ECCC scientists and CMMN data are increasingly used in conservation assessments and plans.
+The specific objectives of the Raptor Population Index (RPI) program are to:
 
-Birds Canada is the administrative home for the CMMN. It manages and archives migration monitoring data for the network, regularly analyzes and produces population trends, and makes these data accessible to the public and other researchers through NatureCounts. Birds Canada also coordinates network-wide research projects and conducts various secretariat duties for the CMMN. 
+-   Produce statistically defensible indices of annual abundance and trends for each species of migratory raptor from as many count sites as possible.
 
+-   Provide frequently updated assessments of the status of each species.
 
+-   Make these results widely available, i.e. to participating count sites, the scientific community, conservation agencies, and the public.
+
+Support for the RPI project has been provided in part by the National Fish and Wildlife Foundation and the U.S. Fish and Wildlife Service, as well as by private donations from HMANA members and friends, and in-kind support from the three partner organizations, HMANA, Hawk Mountain Sanctuary, HawkWatch International, and Birds Canada.
+
+For more information and results, please visit the Raptor Population Index website: <http://www.rpi-project.org/> or NatureCounts: <https://birdscanada.org/birdmon/default/popindices.jsp>
+
+## Author Notes
+
+Version: July 2023
+Author: Danielle Ethier, Population Scientist, Birds Canada, dethier@birdscanada.org

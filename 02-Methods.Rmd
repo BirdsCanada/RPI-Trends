@@ -1,88 +1,33 @@
-# Methods 
-
-## Count Variables 
-
-In 2023, the trend analysis was changed from using Daily Estimated Total (DET) for all species, to using standardized counts (e.g., banding + census) for Regular Migrants and DETs for all other migration types (defined below). 
-
-You can change the observation count used for the analysis by changing the 'obs.var' value in the "CMMN_Analysis_ParameterValues.csv" file saved in the `Data` folder.  
-
-Note: In the BMDE different column represent different count types. 
-
-ObservationCount =  Daily Estimated Totals
-ObservationCount2 = DST
-ObservationCount3 = Census
-ObservationCount4 = Banded
-ObservationCount5 = Other (recap, stopover, repeat)
-ObservationCount6 = Other (visual migration, observations outside of census)
+# Analysis Methods
 
 
-## Species classification 
+```{r tidyr2, echo = FALSE, message = FALSE, warning = FALSE}
 
-All species at each site are classified using the following describes: 
+library(knitr)
+opts_chunk$set(tidy.opts=list(width.cutoff=50), tidy = FALSE)
 
-**M** Regular migrant, 75+% of season covered by station in 2/3 or more of all years, few individuals present before or after clear migratory surge.  Species is well-monitored at the site. Trends are of good quality, and represent change in population size for a large area of the station's catchment area. 
+```
 
-**ML** Similar to M, except that numbers before/after migratory peak (i.e. local area birds) amount to more than a quarter of peak numbers during the migratory surge.  Although the analysis window is limited to the period of migratory surge, the resulting trend is strongly affected by local population level (which may or may not agree with trend for birds migrating through the site).  Note that “local area” birds are those regularly observed at a station, though they may not breed or winter right at the site.
+Long-term trends in migration counts were estimated independently for each species, site and season using a Bayesian hierarchical GAM framework with Integrated Nested Laplace Approximation (R-INLA, Rue et al. 2017) in R (version 3.1.3; R Core Team 2014). We estimated trends using log-linear regression, which included a smooth effect for year (i) and day of year (j) to model temporal patterns in population trajectories and the seasonal distributions of counts, respectively. We fit a cubic regression spline using the package mgcv (Wood 2011) with approximately 1 knot for every 4 years of data (following Smith and Edwards 2020), and 1 knot for every 8 days of data. The number of knots controls for the upper limit on the complexity of the smoother. We also include random annual fluctuations around the smoothed year effects (YE) to model population trajectories (similar to Smith and Edwards 2020), with an independent and identically distributed (IID) hierarchical year term (i.e., GAMYE).
 
-**I** Irruptive and irregular migrants.  For species without a regular pattern of migratory movement, analysis window is usually the whole coverage period, as irruptive timing may vary among years.  Annual indices represent annual variation in extent of irruption (although migration coverage may not cover entire period of movement).  Over the long term population trends may be discernable despite the high degree of annual variation, but should be considered case by case.
+Indices of Abundance The population trajectory for each species, site and season were defined be the collection of estimated annual indices of abundance (ni). These indices are calculated as the exponential mean daily count from the posterior distribution of the GAMYE model. We also calculated smoothed population trajectories for the GAMYE, as above, but without the parameter for annual fluctuations (YE). These smoothed indices (smooth_ni) provide an estimate of the medium and longer-term patterns of population change after removing the effect of the random annual fluctuations and form the basis of the trend calculations (Smith and Edwards 2020).
 
-**L** Birds from local area (not necessarily breeding or wintering at count site per se, but regularly observed there), showing no migratory peak in seasonal pattern.  Trends are assumed to reflect population change in local area, which may or may not agree with trends at larger scales.
+Trends Multiple metrics can be used to estimate a 'trend' from the estimated population trajectories. We provide endpoint trends calculated post-hoc from the smoothed population trajectories following methods outlined in the bbsBayes package (Edward and Smith 2021). Specifically, endpoint trend estimates are the geometric mean annual change (% per year) in the population trajectory, using an interval-specific ratio of the smoothed annual indices at the start and end of the time period (Sauer and Link 2011). 
 
-**S** Staging species (usually waterfowl and shorebirds) with pattern of migratory surge of which 75% or more is covered by the station.  Some S species would be M if it were known that movement is unidirectional and there is minimal stopover.  In most cases, however, trends may represent site use rather than population change, as there may be annual variation in use of the specialized stopover sites in the region, only one of which is being monitored.   Trends should be interpreted case by case.
+Trend estimates and 95% credible intervals were back-transformed to annual rates of population change using 100\*exp(estimate)-1. Trend were calculated using the full dataset, as well as for the most recent 10-years, and three generations (Bird et al. 2020), the latter of which are informative to status assessments in Canada (e.g., see COSEWIC's Quantitative criteria and guideline for the status assessment of wildlife species). If the three-generation length was less than 10 years, the output reflects the 10-year trend.
 
-**MX** Regular migrant, but coverage at site a little too short to cover 75% of migration period.   Shifts in timing of migration are not detectable from the data (e.g. change in timing due to climate change could produce a trend that is independent of true population size.)  This is a subclass of "O" species, but designated separately to draw attention to species that could become "M" with modest extension of coverage.
+Literature Cited
 
-**O** Other. Does not fit into any of the above groups.  May have no clear migratory peak.  May represent individuals of one or a combination of several categories: casual visitors, premigratory dispersal, tail ends of wintering populations, or other classes of birds whose numbers probably do not represent population change either at broad scale or in local breeding population.
+Bird, J. P., Martin, R., Akçakaya, H. R., Gilroy, J., Burfield, I. J., Garnett, S. T., Symes, A., Taylor, J., ekerciolu, Ç. H., & Butchart, S. H. M. (2020). Generation lengths of the world's birds and their implications for extinction risk. Conservation Biology, 34(5), 1252-1261. ttps://doi.org/10.1111/cobi.13486
 
-## Data filters 
+Edwards, B., Smith, A. (2021). "bbsBayes: An R Package for Hierarchical Bayesian Analysis of North American Breeding Bird Survey Data." Journal of Open Research Software, 9. <doi:10.5334/jors.329>.
 
-Bad dates: In some cases, certain years or dates are removed from the analysis at a particular site and/or for a particular species at a site. 
+R Core Team. (2014). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria. [online] URL: <http://www.r-project.org>.
 
-The bad dates file can be accessed through the naturecounts R package.
+Rue, H., S. Martino, F. Lindgren, D. Simpson, and A. Riebler. (2014). INLA: Functions which allow to perform full Bayesian analysis of latent Gaussian models using Integrated Nested Laplace Approximation. [online] URL: <http://www.r-inla.org>.
 
-## Abundance filters 
+Smith, A., Edwards, B. (2020). North American Breeding Bird Survey status and trend estimates to inform a wide-range of conservation needs, using a flexible Bayesian hierarchical generalized additive model. bioRxiv. doi: <https://doi.org/10.1101/2020.03.26.010215>
 
-No results are produced for species that do not meet a minimum level of abundance or frequency during the site’s seasonal coverage (average of 10+ detections per season and detected on 5+ days per season). 
-
-## Migration Windows  
-
-Analysis for each species is limited to the dates the species is moving through the site.  Long-term average daily counts were plotted against date, and the analysis “window,” incorporating approximately 95% of the migratory movement, was selected as the dates between which numbers clearly begin to increase and when they return to a relatively steady level following the migratory surge. The same procedure was used for species whose entire migration was not fully covered (i.e., the window omits dates when the species is absent or at low basal levels).  For all species with no clear pattern of movement into and/or out of the area (such as resident species, many “O” species, and irruptive species with irregular timing), the window was defined as the entire seasonal coverage period for that site. 
-
-The [seasonal abundance tool](https://naturecounts.ca/nc/default/popindices.jsp?what=seasonal) allows you to display the migration phenology.  
+Wood, S.N. (2011) Fast stable restricted maximum likelihood and marginal likelihood estimation of semiparametric generalized linear models. Vol. 73, Journal of the Royal Statistical Society (B). p. 3--36.  
 
 
-## Annual Indices and Population Trends 
-
-**To be updated!**
-
-Long-term trends in count were estimated independently for each species, site and season using a Bayesian framework with Integrated Nested Laplace Approximation (R-INLA, Rue et al. 2014).  
-
-We estimated trends using log-linear regression, which included 1) a continuous effect for year (i) to estimate log-linear change in population size over time, 2) first and second order effects for day of year (j) to model the seasonal distribution of counts,  and 3) hierarchical terms to account for random variation in counts among years and among days.  
-
-
-loga(μ_ij )=〖α+β〗_1×〖year〗_ij+β_2×〖day〗_ij+β_3×〖day〗_ij^2+γ_i+η_j,
-
-where γ_i is a first-order autoregressive (AR1) random effect for year to account for temporal autocorrelation among years, and η_jis an independent and identically distributed (IID) hierarchical term to account for random variation in counts among days of the year.  
-
-For monitoring stations with more than one site (e.g., Long Point Bird Observatory), the regression also included a fixed site effect, as well as interactions between site and the first and second-order day of year effects.
-
-While we recognize that an AR1 random effect for day of year nested within year might have been more appropriate to account for temporal autocorrelation among daily counts, we found that specifying the random day effect as IID had no noticeable effect on trend bias or on probability of estimating a precise trend (probability that the simulated trend fell within confidence limits of the estimated trend; T. L. Crewe, unpublished data).  Specifying the random day effect as IID did, however, significantly increase the speed of analysis, and reduced the probability of errors using INLA.  
-
-We assumed a Poisson distribution of counts, unless the proportion of 0-observation days across years was >= 0.65. This cut-off is somewhat arbitrary, and should be examined in greater detail, but see Crewe et al. 2016. For both data distributions, year estimates and 95% credible intervals were back-transformed to annual rates of population change using 100*exp(estimate)-1.  Trends were calculated using the full dataset, as well as for all 10-year subsets to estimate 10-, 20-, 30-year (etc., where appropriate)  trends for comparison among years over time.  Trends are presented as %/year with lower and upper 95% credible intervals, which suggest that there is a 95% probability that the true trend falls within that range.  A posterior distribution was also calculated to estimate the support for an increasing or declining trend.  A value near 0.5 would suggest equal probability for an increasing and declining trend (little evidence for a change in migration counts over time), whereas a posterior probability near 1 will suggest strong support for the observed change in counts.  The posterior probability can be used as a pseudo p-value, such that trends with a posterior probability > 0.9 could be considered to have strong support.  Annual indices of population size were estimated as the mean daily count from the posterior distribution of the above model. Plots of annual indices show 95% credible intervals (vertical lines), and the black line and grey shading display a loess fit across indices and upper and lower credible intervals.
-
-
-## Order of execution 
-
-The following outlines the steps taken, in the order taken:
-
-- pick observation count of interest (census, band, DET)
-- species loop
-- zero-fill
-- drop species-specific bad dates
-- filter species-specific seasonal windows
-- filter out if don't meet minimum year requirement 
-- filter abundance (mean # individuals/season/year >= 10)
-- filter occurrence (mean # obs days/season/year >= 5)
-- drop years with no observations
-- generate migration window summary (for plotting online)
-- loop through sites (site-specific only) and season, center date variables, and run analysis.

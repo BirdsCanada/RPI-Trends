@@ -6,10 +6,11 @@ require(tidyverse)
 require(ggplot2)
 require(naturecounts)
 
+out.dir <- paste("Output/", max.yr, "/", sep = "")
+plot.dir <- paste("Plots/", max.yr, "/", sep = "")
 
-in.dir <- paste("Output/", max.year, "/", sep = "")
-out.dir <- paste("Plots/", max.year, "/", sep = "")
-site <- as.character(anal.param[t, "site"])
+site <- as.character(anal.param[t, "SiteCode"])
+seas <- as.character(anal.param[t,"seas"])
 
 #add species English and French name
 sp.name<-meta_species_taxonomy()
