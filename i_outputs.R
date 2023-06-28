@@ -18,9 +18,9 @@ site <- as.character(anal.param[t, "SiteCode"])
 
 ## Create text file for indices
 
-indices.csv <- as.data.frame(matrix(data = NA, nrow = 1, ncol = 23, byrow = FALSE,
+indices.csv <- as.data.frame(matrix(data = NA, nrow = 1, ncol = 24, byrow = FALSE,
                                     dimnames = NULL))
-names(indices.csv) <- c("upload_id",	"results_code",	"version",	"area_code",	"species_code",	"species_name",	"species_sci_name",	"year",	"season",	"period",	"species_id",	"index",	"stderr",	"stdev",	"upper_ci",	"lower_ci",	"trend_id",	"smooth_index",	"smooth_upper_ci",	"smooth_lower_ci",	"upload_dt",	"error", "meanObs") 
+names(indices.csv) <- c("upload_id",	"results_code",	"version",	"area_code",	"species_code",	"species_name",	"species_sci_name",	"year",	"season",	"period",	"species_id",	"index",	"stderr",	"stdev",	"upper_ci",	"lower_ci",	"trend_id",	"smooth_index",	"smooth_upper_ci",	"smooth_lower_ci",	"upload_dt",	"error", "meanObs", "family") 
 
 
 write.table(indices.csv, file = paste(out.dir, 

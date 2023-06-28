@@ -55,11 +55,7 @@ Now that you have selected the RPI site/ season, we are going to clean the data.
   - Load the data from the naturecounts database. You will be prompted for your password. The code will first look to see if the data have been downloaded and stored. 
   - Subset data to min and max year based on analysis parameters file.
   - Calculate season-specific station windows (when a station normally operates).
-  - Make list of sampling dates for zero-filling (based on *DET*)
-  - Assign Species Code, and drop species that won't be analyzed (i.e., updates to taxonomies).
-  - Use the superfile to filter to species and season of interest.
-  - Assign UNEM For LPBO data only.
-  - Save the manipulated data in the `Data` folder
+  - Make list of sampling dates for zero-filling 
   - Generates a species list for the analysis
   - Create output tables for the analysis
   
@@ -96,3 +92,12 @@ source("iii_plot.R")
 
 ```
 
+## Analysis Loop
+
+Once you are happy with how everything is going, you may choose to run all the 3 steps by looping through each row in the analysis parameters file. This is a unsupervised process.
+
+```{r Loop}
+
+source("iv_loop.R")
+
+```

@@ -379,6 +379,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       mn.yr1$smooth_lower_ci<-"NULL"
       mn.yr1$smooth_upper_ci<-"NULL"
       mn.yr1$upload_dt<-"NULL"
+      mn.yr1$family<-family
       
       # Run LOESS function
       
@@ -393,7 +394,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       # Order output before printing to table
       
       
-      mn.yr2<-mn.yr2 %>% select (upload_id,	results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	year,	season,	period,	species_id,	index,	stderr,	SD,	upper_ci,	lower_ci,	trend_id,	indexloess,	smooth_upper_ci,	smooth_lower_ci,	upload_dt,	error, meanObs)
+      mn.yr2<-mn.yr2 %>% select (upload_id,	results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	year,	season,	period,	species_id,	index,	stderr,	SD,	upper_ci,	lower_ci,	trend_id,	indexloess,	smooth_upper_ci,	smooth_lower_ci,	upload_dt,	error, meanObs, family)
       
       mean.index<-mean(mn.yr2$index)
       
@@ -408,7 +409,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       
       # Write data to table
       write.table(mn.yr2, 
-                  file = paste(out.dir,	site, "_AnnualIndices.csv", sep = ""),
+                  file = paste(out.dir,	site, "_", seas, "_AnnualIndices.csv", sep = ""),
                   row.names = FALSE, 
                   append = TRUE, 
                   quote = FALSE, 
@@ -543,7 +544,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         write.trend<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	species_id,	season,	period,	years,	min_year, max_year, Trend,	index_type,	Trend_Q_0.025, Trend_Q_0.95, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	Width_of_Credible_Interval,	precision_cat,	coverage_num,	coverage_cat,	goal,	goal_lower,	sample_size,	sample_total,	subtitle,	pval,	pval_str,	post_prob,	trnd_order,	dq,	slope_trend,	prob_LD,	prob_MD,	prob_LC,	prob_MI,	prob_LI,	quantile_050,	quantile_165,	quantile_835,	quantile_950,	trend_id,	upload_dt,	error, sd)
         
         write.table(write.trend, 
-                    file = paste(out.dir, site, "_Trends.csv", sep = ""), 
+                    file = paste(out.dir, site, "_", seas, "_Trends.csv", sep = ""), 
                     row.names = FALSE, 
                     append = TRUE, 
                     quote = FALSE, 
