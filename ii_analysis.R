@@ -52,7 +52,17 @@ if(site == "484"){
     droplevels() 
 }
 
-event.data<-tmp.data %>% select(SiteCode, YearCollected, MonthCollected, DayCollected, DurationInHours, doy) %>% distinct()
+
+#create events data for zero filling
+event.data <- tmp.data %>%
+  filter(ObservationCount > 0) %>%
+  group_by(SiteCode, YearCollected, MonthCollected, DayCollected, DurationInHours, doy) %>%
+  mutate(nspecies = n()) %>%
+  filter(nspecies > 1) %>% # assuming at least one individual detected each day. This could be modified, for example, to include only dates when at least 10 species were detected.
+  select(SiteCode, YearCollected, MonthCollected, DayCollected, DurationInHours, doy) %>% 
+  distinct() %>%
+  ungroup() %>%
+  as.data.frame()
 
 #Turn on once ready to run the analysis
 if(max(tmp.data$YearCollected) == max.yr) { #continue only if the max year in database is what it should be
@@ -121,6 +131,8 @@ for(j in 1:length(sp.list)) {
   windows$species_code <- species
   windows$site <- site
 
+if(nrow(date.tot)>0){   #only continue if data remains after migration window filter 
+  
   #print window to file
   
   write.table(windows, file = paste(out.dir, site, "_", seas, "_SeasonalWindows.csv", sep = ""), row.names = FALSE, append = TRUE, quote = FALSE, sep = ",", col.names = FALSE)
@@ -213,8 +225,8 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   #Use penalised complex prior for random year effect
   hyper.iid<-list(prec=list(prior="pc.prec", param=c(2,0.05)))
   
-    index.gam<- ObservationCount ~ -1 + Xsmy + Xsdy + f(fyear, model="iid", hyper=hyper.iid)
-    index.gamS<- ObservationCount ~ -1 + Xsmy + Xsdy 
+    index.gam<- ObservationCount ~ -1 + Xsmy + Xsdy + f(fyear, model="iid", hyper=hyper.iid) + DurationInHours
+    index.gamS<- ObservationCount ~ -1 + Xsmy + Xsdy + DurationInHours
 
   
   ###### RUN ANALYSIS
@@ -241,10 +253,10 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   index<-t.model[,2]
   
   #rerun the top model and save output
-  top.model<-try(inla(index.gam, family = family, data = date.tot, E = DurationInHours, 
+  top.model<-try(inla(index.gam, family = family, data = date.tot,  
                       control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
-  top.modelS<-try(inla(index.gamS, family = family, data = date.tot, E = DurationInHours, 
+  top.modelS<-try(inla(index.gamS, family = family, data = date.tot, 
                        control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
   
@@ -257,7 +269,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
     
     #Print final error table to file
     
-    write.table(error, file = paste(out.dir, "ErrorFile.csv", sep = ""), row.names = FALSE, append = TRUE, 
+    write.table(error, file = paste(out.dir, site, "_", seas, "ErrorFile.csv", sep = ""), row.names = FALSE, append = TRUE, 
                 quote = FALSE, sep = ",", col.names = FALSE)
   }	#end try-error statement
   
@@ -554,14 +566,15 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       
       ######################################################################################  
       
-      } # end length time period       
-    } # end try error trend top.modelS 
+  } # end length time period       
+  } # end try error trend top.modelS 
   } # end try error trend top.model 
   } # nrow (tmp)>10
   } # nrow(min.yrs)>0
+  } # end if data.tot nrow>0
   } # end sp.list
 
-} #end max year statement
+  } #end max year statement
 
 
 

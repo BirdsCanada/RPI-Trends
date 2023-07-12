@@ -56,9 +56,9 @@ out.plot <- NULL
 i <- 1
 j <- 6
 
-  for(t in 1:(ceiling(length(sp.list)/6))) {
+  for(k in 1:(ceiling(length(sp.list)/6))) {
     
-    out.plot[[t]] <- ggplot(data = subset(plot.dat, species_name %in% sp.list[i:j]), aes(x = as.numeric(year), y = index)) +
+    out.plot[[k]] <- ggplot(data = subset(plot.dat, species_name %in% sp.list[i:j]), aes(x = as.numeric(year), y = index)) +
       facet_wrap(~ sp.trend, ncol = 2, scales = "free", as.table = TRUE) +
       geom_pointrange(aes(ymin = lower_ci, ymax = upper_ci, group = season, shape = season)) +
       geom_smooth(aes(ymin = lower_ci, ymax = upper_ci, group = season, colour = season, fill = season, linetype = season), method = "loess",	size = 0.5, alpha = 0.1) + 
@@ -77,7 +77,7 @@ j <- 6
 
 length(out.plot)
 # Plot to PDF file
-pdf(paste(plot.dir, site, "_", name, "_IndexPlot.pdf", sep=""),
+pdf(paste(plot.dir, site, "_", season, "_", name, "_IndexPlot.pdf", sep=""),
     height = 10, width = 8, paper = "letter")
 try(print(out.plot[[1]], silent=T))
 try(print(out.plot[[2]], silent=T))

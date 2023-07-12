@@ -37,7 +37,7 @@ anal.param <- read.csv("Data/RPI_Analysis_Parameters.csv")
 ##Keep just the site number
 #anal.param$SiteCode<-as.numeric(gsub("HawkCount-", "", anal.param$SiteCode))
 
-View(anal.param)
+#View(anal.param)
 
 ```
 

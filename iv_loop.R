@@ -8,10 +8,15 @@ anal.param <- read.csv("Data/RPI_Analysis_Parameters.csv")
 
 source("00_setup.R")
 
-for(t in 1:nrow(anal.param)){
+anal.test<-anal.param[6:10, ]
+
+for(t in 1:nrow(anal.test)){
+#for(t in 1:nrow(anal.param)){
   
   source("i_outputs.R")
   source("ii_analysis.R")
   source("iii_plot.R")
+ 
   
 } #end nrow(anal.param)
+
