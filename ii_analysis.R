@@ -355,7 +355,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       }
       
       mn.yr1 <- as.data.frame(mn.yr1)
-      names(mn.yr1) <- c("index", "upper_ci", "lower_ci", "SD")
+      names(mn.yr1) <- c("index", "lower_ci", "upper_ci", "SD")
       
       #   mn.yrS<-NULL
       #   mn.yrS<-matrix(nrow=nyears, ncol=4)
