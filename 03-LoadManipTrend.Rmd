@@ -23,7 +23,7 @@ ID<- "dethier" #change this to your user ID. You will be prompted for a password
 
 ```
 
-## Choose your CMMN station 
+## Choose your RPI station 
 
 The number assigned to `t` will correspond to the row in the analysis parameters file ('anal.param') you want to analyze (each site has a separate row).
 
@@ -44,7 +44,7 @@ anal.param <- read.csv("Data/RPI_Analysis_Parameters.csv")
 Select your station/season. 
 ```{r chooseSite}
 
-t <- 1
+t <- 6
 
 ```
 
@@ -75,7 +75,7 @@ From this point forward, we loop through species and season:
 
 2) Apply species-specific filters to abundance (mean 10 individuals/year), occurrence (mean 5 observation days/year), and drop years with no observations.
 
-3) Run the trend analysis by looping through year periods (10-year periods)
+3) Run the trend analysis by looping through year periods (all years, 10-years, and 3-generations)
 
 
 ```{r Change Defaults}
