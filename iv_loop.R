@@ -2,16 +2,15 @@
 
 #Put all the analytically steps into one loop once you are happy with how everything is running.  
 
-max.yr <- 2022 #needs changes with each analysis
-ID<- "dethier"
+max.yr <- 2022 #needs changed with each analysis
+ID<- "dethier" #change to your user ID
 anal.param <- read.csv("Data/RPI_Analysis_Parameters.csv") 
 
 source("00_setup.R")
 
-anal.test<-anal.param[6:10, ]
+#anal.param<-anal.param[6:10, ] # to test on different stations
 
-for(t in 1:nrow(anal.test)){
-#for(t in 1:nrow(anal.param)){
+for(t in 1:nrow(anal.param)){
   
   source("i_outputs.R")
   source("ii_analysis.R")

@@ -61,13 +61,13 @@ j <- 6
     out.plot[[k]] <- ggplot(data = subset(plot.dat, species_name %in% sp.list[i:j]), aes(x = as.numeric(year), y = index)) +
       facet_wrap(~ sp.trend, ncol = 2, scales = "free", as.table = TRUE) +
       geom_pointrange(aes(ymin = lower_ci, ymax = upper_ci, group = season, shape = season)) +
-      geom_smooth(aes(ymin = lower_ci, ymax = upper_ci, group = season, colour = season, fill = season, linetype = season), method = "loess",	size = 0.5, alpha = 0.1) + 
+      geom_smooth(aes(ymin = lower_ci, ymax = upper_ci, group = season, colour = season, fill = season, linetype = season), method = "loess") + 
       xlab("Year") +
       ylab("Annual Index") +
       theme_bw() +
       scale_y_continuous(trans="log10") +
-      scale_x_continuous(breaks = seq(from = min.yr.filt, to = max.yr.filt, by = 4)) +
-      scale_shape_manual(values = c(1,2)) +
+    #  scale_x_continuous(breaks = seq(from = min.yr.filt, to = max.yr.filt, by = 4)) +
+    #  scale_shape_manual(values = c(1,2)) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
       theme(legend.position = "none")
   
@@ -77,7 +77,7 @@ j <- 6
 
 length(out.plot)
 # Plot to PDF file
-pdf(paste(plot.dir, site, "_", season, "_", name, "_IndexPlot.pdf", sep=""),
+pdf(paste(plot.dir, site, "_", seas, "_", name, "_IndexPlot.pdf", sep=""),
     height = 10, width = 8, paper = "letter")
 try(print(out.plot[[1]], silent=T))
 try(print(out.plot[[2]], silent=T))

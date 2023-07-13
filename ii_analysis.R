@@ -105,6 +105,9 @@ for(j in 1:length(sp.list)) {
       mutate(ObservationCount = replace(ObservationCount, is.na(ObservationCount), 0))
 
    sp.dat$species_code<-species
+   sp.dat$ObservationCount<-as.numeric(sp.dat$ObservationCount)
+   sp.dat$DurationInHours<-as.numeric(sp.dat$DurationInHours)
+   sp.dat$YearCollected<-as.numeric(sp.dat$YearCollected)
     
     #amalgamate hourly counts into daily totals
   
