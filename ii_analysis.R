@@ -56,11 +56,12 @@ if(site == "484"){
 #create events data for zero filling
 event.data <- tmp.data %>%
   filter(ObservationCount > 0) %>%
-  group_by(SiteCode, YearCollected, MonthCollected, DayCollected, DurationInHours, doy) %>%
-  mutate(nspecies = n()) %>%
-  filter(nspecies > 1) %>% # assuming at least one individual detected each day. This could be modified, for example, to include only dates when at least 10 species were detected.
-  select(SiteCode, YearCollected, MonthCollected, DayCollected, DurationInHours, doy) %>% 
+  group_by(SiteCode, YearCollected, MonthCollected, DayCollected, doy, TimeCollected) %>%
+  slice_max(DurationInHours) %>% 
+  select(SiteCode, YearCollected, MonthCollected, DayCollected, doy, TimeCollected, DurationInHours) %>% 
   distinct() %>%
+  ungroup() %>%
+  group_by(SiteCode, YearCollected, MonthCollected, DayCollected, doy) %>% summarize(DurationInHours=sum(DurationInHours)) %>% 
   ungroup() %>%
   as.data.frame()
 
@@ -95,6 +96,7 @@ sp.list <- unique(tmp.data$species_code)
 
 for(j in 1:length(sp.list)) { 
   
+    sp.dat<-NULL  
     sp.dat <- subset(tmp.data, species_code == sp.list[j])
     
     sp.id <- unique(sp.dat$species_id)
@@ -111,11 +113,12 @@ for(j in 1:length(sp.list)) {
     
     #amalgamate hourly counts into daily totals
   
-  date.tot <- recast(sp.dat, species_code + YearCollected + doy ~ variable, 
+  date.tot <- recast(sp.dat, species_code + YearCollected + doy + DurationInHours ~ variable, 
                      fun.aggregate = sum, na.rm = TRUE,
-                     id.var = c("species_code", "YearCollected", "doy"), 
-                     measure.var = c("ObservationCount", "DurationInHours"))
+                     id.var = c("species_code", "YearCollected", "doy", "DurationInHours"), 
+                     measure.var = c("ObservationCount"))
   date.tot <- data.frame(date.tot)
+  date.tot <- date.tot %>% drop_na(DurationInHours)
   
   
   # determine the 95%ile of days of year with observations for
@@ -200,9 +203,9 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   kyears<- ceiling(nyears/4) #round up to nearest whole number
   
   ndays <- length(unique(date.tot$doyfac))
-  kdays<- ceiling(ndays/8)
+  #kdays<- ceiling(ndays/8)
   
-  #kdays<-2 #polynomial like previous
+  kdays<-3 #polynomial like previous
   
   #smooth years
   smy<-smoothCon(s(YearCollected, bs="cr", k=kyears), data=date.tot)[[1]]
@@ -228,7 +231,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   #Use penalised complex prior for random year effect
   hyper.iid<-list(prec=list(prior="pc.prec", param=c(2,0.05)))
   
-    index.gam<- ObservationCount ~ -1 + Xsmy + Xsdy + f(fyear, model="iid", hyper=hyper.iid) + DurationInHours
+    index.gam<- ObservationCount ~ -1 + Xsmy + Xsdy + DurationInHours + f(fyear, model="iid", hyper=hyper.iid) 
     index.gamS<- ObservationCount ~ -1 + Xsmy + Xsdy + DurationInHours
 
   
@@ -238,17 +241,22 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   
   index.nb <-index.pois <-index.zip<- NULL
   
-  index.nb <- try(inla(index.gam, family = "nbinomial", data = date.tot,
+  index.nb <- try(inla(index.gam, family = "nbinomial", data = date.tot, #E = DurationInHours, 
                     control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
-  index.pois <- try(inla(index.gam, family = "poisson", data = date.tot,
+  index.pois <- try(inla(index.gam, family = "poisson", data = date.tot, #E = DurationInHours, 
                     control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
-  model<-c("nbinomial", "poisson")
+  index.zip <- try(inla(index.gam, family = "zeroinflatednbinomial1", data = date.tot, #E = DurationInHours, 
+                         control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
+  
+  
+   model<-c("nbinomial", "poisson", "zeroinflatednbinomial1")
   index.nb.dic<-ifelse(class(index.nb) == 'try-error', NA, index.nb[["dic"]][["dic"]])
   index.pois.dic<-ifelse(class(index.pois) == 'try-error', NA, index.pois[["dic"]][["dic"]])
-  dic<-c(index.nb.dic, index.pois.dic)
-  index<-c("index.nb", "index.pois")
+  index.zip.dic<-ifelse(class(index.zip) == 'try-error', NA, index.zip[["dic"]][["dic"]])
+  dic<-c(index.nb.dic, index.pois.dic, index.zip.dic)
+  index<-c("index.nb", "index.pois", "index.zip")
   t.model<-data.frame(model, index, dic)
   
   t.model<-t.model %>% slice_min(dic, na_rm = TRUE)
@@ -256,13 +264,14 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   index<-t.model[,2]
   
   #rerun the top model and save output
-  top.model<-try(inla(index.gam, family = family, data = date.tot,  
+  top.model<-try(inla(index.gam, family = family, data = date.tot, #E = DurationInHours, 
                       control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
-  top.modelS<-try(inla(index.gamS, family = family, data = date.tot, 
+  top.modelS<-try(inla(index.gamS, family = family, data = date.tot, #E = DurationInHours, 
                        control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
-  
+
+
   #What to do if there is an error in the top.model		
   if(class(top.model) == 'try-error'| is.null(top.model)){
     
@@ -272,7 +281,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
     
     #Print final error table to file
     
-    write.table(error, file = paste(out.dir, site, "_", seas, "ErrorFile.csv", sep = ""), row.names = FALSE, append = TRUE, 
+    write.table(error, file = paste(out.dir, site, "_", seas, "_ErrorFile.csv", sep = ""), row.names = FALSE, append = TRUE, 
                 quote = FALSE, sep = ",", col.names = FALSE)
   }	#end try-error statement
   

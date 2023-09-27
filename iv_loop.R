@@ -8,7 +8,7 @@ anal.param <- read.csv("Data/RPI_Analysis_Parameters.csv")
 
 source("00_setup.R")
 
-#anal.param<-anal.param[6:10, ] # to test on different stations
+anal.param<-anal.param[6:9, ] # to test on different stations
 
 for(t in 1:nrow(anal.param)){
   
