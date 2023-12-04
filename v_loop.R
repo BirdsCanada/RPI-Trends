@@ -14,7 +14,8 @@ for(t in 1:nrow(anal.param)){
   
   source("i_outputs.R")
   source("ii_analysis.R")
-  source("iii_plot.R")
+  source("iii_plottrend.R")
+  source("iV_plotcoverage.R")
  
   
 } #end nrow(anal.param)

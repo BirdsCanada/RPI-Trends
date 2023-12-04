@@ -19,6 +19,7 @@ require(reshape)
 require(ggpubr)
 library(mgcv)
 library(doBy)
+require(lattice)
 
 
 # Create folders as necessary

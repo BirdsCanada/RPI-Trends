@@ -13,12 +13,12 @@ data.type <- as.character(anal.param[t, "data.type"])
 #Import data for the specified station (all species, sites, seasons) using the naturecounts R package. 
 
 #first look in file. If it does not exist, download from database.
-data <-try(read.csv(paste(data.dir, site, "_RawData.csv", sep="")))
+data <-try(read.csv(paste(data.dir, site, ".", seas, ".RawData.csv", sep = "")), silent = T)
 
 if(class(data) == 'try-error'){
 
 data <- nc_data_dl(collections = site, fields_set = "extended", username = ID, info="Trend analysis")
-write.csv(data, paste(data.dir, site, "_RawData.csv", sep=""), row.names = FALSE)
+write.csv(data, paste(data.dir, site, ".", seas, ".RawData.csv", sep = ""), row.names = FALSE)
 
 } #end of try catch, which looks for proceed data on the data.dir first
 
@@ -202,7 +202,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   nyears <- length(unique(date.tot$fyear))
   kyears<- ceiling(nyears/4) #round up to nearest whole number
   
-  ndays <- length(unique(date.tot$doyfac))
+  #ndays <- length(unique(date.tot$doyfac))
   #kdays<- ceiling(ndays/8)
   
   kdays<-3 #polynomial like previous
@@ -239,30 +239,33 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   
   #Run nbinomial, poisson, zip model. Select the model with the lowest DIC.                
   
-  index.nb <-index.pois <-index.zip<- NULL
+#  index.nb <-index.pois <-index.zip<- NULL
   
-  index.nb <- try(inla(index.gam, family = "nbinomial", data = date.tot, #E = DurationInHours, 
-                    control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
+#  index.nb <- try(inla(index.gam, family = "nbinomial", data = date.tot, #E = DurationInHours, 
+#                    control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
-  index.pois <- try(inla(index.gam, family = "poisson", data = date.tot, #E = DurationInHours, 
-                    control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
+#  index.pois <- try(inla(index.gam, family = "poisson", data = date.tot, #E = DurationInHours, 
+#                    control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
-  index.zip <- try(inla(index.gam, family = "zeroinflatednbinomial1", data = date.tot, #E = DurationInHours, 
-                         control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
+#  index.zip <- try(inla(index.gam, family = "zeroinflatednbinomial1", data = date.tot, #E = DurationInHours, 
+#                         control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
   
-   model<-c("nbinomial", "poisson", "zeroinflatednbinomial1")
-  index.nb.dic<-ifelse(class(index.nb) == 'try-error', NA, index.nb[["dic"]][["dic"]])
-  index.pois.dic<-ifelse(class(index.pois) == 'try-error', NA, index.pois[["dic"]][["dic"]])
-  index.zip.dic<-ifelse(class(index.zip) == 'try-error', NA, index.zip[["dic"]][["dic"]])
-  dic<-c(index.nb.dic, index.pois.dic, index.zip.dic)
-  index<-c("index.nb", "index.pois", "index.zip")
-  t.model<-data.frame(model, index, dic)
+#  model<-c("nbinomial", "poisson", "zeroinflatednbinomial1")
+#  index.nb.dic<-ifelse(class(index.nb) == 'try-error', NA, index.nb[["dic"]][["dic"]])
+#  index.pois.dic<-ifelse(class(index.pois) == 'try-error', NA, index.pois[["dic"]][["dic"]])
+#  index.zip.dic<-ifelse(class(index.zip) == 'try-error', NA, index.zip[["dic"]][["dic"]])
+#  dic<-c(index.nb.dic, index.pois.dic, index.zip.dic)
+#  index<-c("index.nb", "index.pois", "index.zip")
+#  t.model<-data.frame(model, index, dic)
   
-  t.model<-t.model %>% slice_min(dic, na_rm = TRUE)
-  family<-t.model[,1]
-  index<-t.model[,2]
-  
+#  t.model<-t.model %>% slice_min(dic, na_rm = TRUE)
+#  family<-t.model[,1]
+#  index<-t.model[,2]
+
+  family<-"nbinomial"
+  index<- "index.nb" 
+ 
   #rerun the top model and save output
   top.model<-try(inla(index.gam, family = family, data = date.tot, #E = DurationInHours, 
                       control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
@@ -313,9 +316,9 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       
       #nr<-nrow(date.tot) #DOY is stored second in the lc output
       #smooth<-top.model$summary.lincomb.derived
-      #f<-exp(smooth[824:1646, "mean"])
-      #SeLo<-exp(smooth[824:1646, "0.025quant"])
-      #SeUp<-exp(smooth[824:1646, "0.975quant"]) 
+      #f<-exp(smooth[3028:6054, "mean"])
+      #SeLo<-exp(smooth[3028:6054, "0.025quant"])
+      #SeUp<-exp(smooth[3028:6054, "0.975quant"]) 
       #CR<-data.frame(mu=f, SeUp=SeUp, SeLo=SeLo, ObservationCount=date.tot$ObservationCount, doy=date.tot$doy)
       #CR<-CR %>% group_by(doy) %>% summarise(meanCR=mean(mu), meanOB=mean(ObservationCount), meanSeUp = mean(SeUp), meanSeLo=mean(SeLo)) 
       
@@ -366,22 +369,24 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       mn.yr1 <- as.data.frame(mn.yr1)
       names(mn.yr1) <- c("index", "lower_ci", "upper_ci", "SD")
       
-      #   mn.yrS<-NULL
-      #   mn.yrS<-matrix(nrow=nyears, ncol=4)
+    #     mn.yrS<-NULL
+    #     mn.yrS<-matrix(nrow=nyears, ncol=4)
+    #  
+    #      for(g in 1:nyears){
+    #       mn.yrS[g,1]<-mean(pred.yr2[,g], na.rm=TRUE)
+    #        mn.yrS[g,2]<-quantile(pred.yr2[,g], 0.025, na.rm=TRUE)
+    #        mn.yrS[g,3]<-quantile(pred.yr2[,g], 0.975, na.rm=TRUE)
+    #        mn.yrS[g,4]<-sd(pred.yr2[,g], na.rm=TRUE)
+    #      }
       
-      #    for(g in 1:nyears){
-      #     mn.yrS[g,1]<-mean(pred.yr2[,g], na.rm=TRUE)
-      #      mn.yrS[g,2]<-quantile(pred.yr2[,g], 0.025, na.rm=TRUE)
-      #      mn.yrS[g,3]<-quantile(pred.yr2[,g], 0.975, na.rm=TRUE)
-      #      mn.yrS[g,4]<-sd(pred.yr2[,g], na.rm=TRUE)
-      #    }
+    #  mn.yrS <- as.data.frame(mn.yrS)
+    #  names(mn.yrS) <- c("index_smooth", "lower_ci_smooth", "upper_ci_smooth", "SD_smooth")
       
-      #  mn.yrS <- as.data.frame(mn.yrS)
-      #  names(mn.yrS) <- c("index_smooth", "lower_ci_smooth", "upper_ci_smooth", "SD_smooth")
-      #  mn.yr1$index_smooth<-mn.yrS$index_smooth
-      #  mn.yr1$lower_ci_smooth<-mn.yrS$lower_ci_smooth
-      #  mn.yr1$upper_ci_smooth<-mn.yrS$upper_ci_smooth
-      #  mn.yr1$SD_smooth<-mn.yrS$SD_smooth
+    #  mn.yr1$index_smooth<-mn.yrS$index_smooth
+    #  mn.yr1$lower_ci_smooth<-mn.yrS$lower_ci_smooth
+    #  mn.yr1$upper_ci_smooth<-mn.yrS$upper_ci_smooth
+    #  mn.yr1$SD_smooth<-mn.yrS$SD_smooth
+      
       mn.yr1$species_code <- species
       mn.yr1$years <- paste(min(date.tot$YearCollected), "-", max(date.tot$YearCollected), sep = "")
       mn.yr1$year <- sort(unique(date.tot$YearCollected))
@@ -410,15 +415,14 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       mn.yr2<-NULL
       mn.yr2 <- mn.yr1 %>% mutate(indexloess = loess_func(index,year))
       
-      raw.obs<-date.tot %>% select(YearCollected, ObservationCount, DurationInHours) %>% group_by(YearCollected) %>% summarise(meanObs=mean(ObservationCount/DurationInHours)) %>% dplyr::rename(year=YearCollected)
+      raw.obs<-date.tot %>% select(YearCollected, ObservationCount, DurationInHours) %>% group_by(YearCollected) %>% summarise(meanObs=mean(ObservationCount)) %>% dplyr::rename(year=YearCollected)
       
       mn.yr2<-left_join(mn.yr2, raw.obs, by="year")
-      
-      
+     
       # Order output before printing to table
       
-      
-      mn.yr2<-mn.yr2 %>% select (upload_id,	results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	year,	season,	period,	species_id,	index,	stderr,	SD,	upper_ci,	lower_ci,	trend_id,	indexloess,	smooth_upper_ci,	smooth_lower_ci,	upload_dt,	error, meanObs, family)
+      #mn.yr2<-mn.yr2 %>% select (upload_id,	results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	year,	season,	period,	species_id,	index,	stderr,	SD,	upper_ci,	lower_ci,	trend_id,	indexloess,	smooth_upper_ci,	smooth_lower_ci,	upload_dt,	error, meanObs, family)
+      mn.yr2<-mn.yr2 %>% select(results_code, version, area_code, year,season, period, species_code, species_id, index,stderr, stdev,upper_ci, lower_ci, LOESS_index, species_name, species_sci_name)
       
       mean.index<-mean(mn.yr2$index)
       
@@ -484,7 +488,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         tenyr<-endyr-10
         yrten<-nyears-10
         
-        time.period = c("all years", "10-years", "3-generation")
+        time.period = c("all years", "10-years", "3Gen-Recent")
         Y1.trend <- c(startyr, tenyr, threegen)
         Y2.trend <- c(endyr, endyr, endyr)
         
@@ -503,9 +507,40 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         
         pred.ch<-pred.yr2[,c(y1, y2)] 
         pred.ch<-as.data.frame(pred.ch) 
-        pred.ch<-pred.ch %>% mutate(ch=V2/V1, max_year=Y2, min_year=Y1, tr=(100*((ch^(1/(max_year-min_year)))-1)))
+        pred.ch<-pred.ch %>% mutate(ch=(V2/V1), max_year=Y2, min_year=Y1, tr=(100*((ch^(1/(max_year-min_year)))-1)))
         pred.ch<-pred.ch %>% reframe(Trend=median(tr), percent_change=100*(median(ch)-1), Trend_Q_0.025=quantile(tr, probs=0.025), Trend_Q_0.95=quantile(tr, probs=0.95), sd=sd(tr), Width_of_Credible_Interval=Trend_Q_0.95-Trend_Q_0.025) %>% distinct()
         
+        #Estimate the slope trend base 
+        
+        # Summary of the GAM smooth on year
+         wy=c(y1:y2)
+         ne = log(pred.yr2[,wy]) #these are the smoothed indices
+        
+        #This is the slope function. 
+        #It calculates the coefficient of the lm slope for each row in the smoothed output. 
+        
+        #slope function 1 
+         slope  <-  function(x){
+           return(coef(lm(x~I(y1:y2)))[2])
+         }
+        
+         m =  apply(ne,1,slope)
+         m = as.vector((exp(m)-1)*100)
+         
+        #slope function 2 (gives same result as above)
+         
+        # bsl = function(i){
+        #   n = length(wy)
+        #   sy = sum(i)
+        #   sx = sum(wy)
+        #   ssx = sum(wy^2)
+        #   sxy = sum(i*wy)
+        #   b = (n*sxy - sx*sy)/(n*ssx - sx^2)
+        #   return(b)
+        # } 
+        #  m2 =  t(apply(ne,1,FUN = bsl))
+        #  m2 = as.vector((exp(m2)-1)*100)
+         
         #write output to table   
         trend.out<-NULL
         trend.out <- pred.ch %>%
@@ -551,7 +586,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
                  post_prob = "NULL",
                  trnd_order = "NULL",
                  dq = "NULL",
-                 slope_trend = "NULL",
+                 slope_trend = median(m, na.rm=TRUE),
                  prob_LD = "NULL",
                  prob_MD = "NULL",
                  prob_LC = "NULL",
@@ -564,17 +599,44 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
                  trend_id = "NULL",
                  upload_dt = "NULL")
         
-        
-        write.trend<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	species_id,	season,	period,	years,	min_year, max_year, Trend,	index_type,	Trend_Q_0.025, Trend_Q_0.95, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	Width_of_Credible_Interval,	precision_cat,	coverage_num,	coverage_cat,	goal,	goal_lower,	sample_size,	sample_total,	subtitle,	pval,	pval_str,	post_prob,	trnd_order,	dq,	slope_trend,	prob_LD,	prob_MD,	prob_LC,	prob_MI,	prob_LI,	quantile_050,	quantile_165,	quantile_835,	quantile_950,	trend_id,	upload_dt,	error, sd)
+       #write.trend<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	species_id,	season,	period,	years,	min_year, max_year, Trend, index_type,	Trend_Q_0.025, Trend_Q_0.95, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	Width_of_Credible_Interval,	precision_cat,	coverage_num,	coverage_cat,	goal,	goal_lower,	sample_size,	sample_total,	subtitle,	pval,	pval_str,	post_prob,	trnd_order,	dq,	slope_trend,	prob_LD,	prob_MD,	prob_LC,	prob_MI,	prob_LI,	quantile_050,	quantile_165,	quantile_835,	quantile_950,	trend_id,	upload_dt,	error, sd)
+        write.trend<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_id,	season,	period,	years,	year_start,	year_end,	trnd,	index_type,	upper_ci, lower_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size,	prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
+
         
         write.table(write.trend, 
-                    file = paste(out.dir, site, "_", seas, "_Trends.csv", sep = ""), 
+                    file = paste(out.dir, site, "_", seas, "_TrendsEndpoint.csv", sep = ""), 
                     row.names = FALSE, 
                     append = TRUE, 
                     quote = FALSE, 
                     sep = ",", 
                     col.names = FALSE)  
-
+        
+        #include slop output in new table
+        trend.out$index_type="slope"
+        trend.out$Trend<-median(m, na.rm=TRUE)
+        trend.out$Trend_Q_0.025<-quantile(m, prob=0.025)
+        trend.out$Trend_Q_0.95<-quantile(m, prob=0.950)
+        trend.out$sd<-sd(m, na.rm=TRUE)
+        
+        per_trend=trend.out$Trend/100
+        period_num=Y2-Y1
+        trend.out$percent_change<-((1+per_trend)^period_num-1)*100
+        trend.out$Width_of_Credible_Interval_slope<-trend.out$Trend_Q_0.95-trend.out$Trend_Q_0.025
+        trend.out$precision_cat = ifelse(pred.ch$Width_of_Credible_Interval<3.5, "High", ifelse(pred.ch$Width_of_Credible_Interval>=3.5 & pred.ch$Width_of_Credible_Interval<=6.7, "Medium", "Low"))
+       
+        #write.trend2<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	species_id,	season,	period,	years,	min_year, max_year, Trend, index_type,	Trend_Q_0.025, Trend_Q_0.95, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	Width_of_Credible_Interval,	precision_cat,	coverage_num,	coverage_cat,	goal,	goal_lower,	sample_size,	sample_total,	subtitle,	pval,	pval_str,	post_prob,	trnd_order,	dq,	slope_trend,	prob_LD,	prob_MD,	prob_LC,	prob_MI,	prob_LI,	quantile_050,	quantile_165,	quantile_835,	quantile_950,	trend_id,	upload_dt,	error, sd)
+        write.trend2<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_id,	season,	period,	years,	year_start,	year_end,	trnd,	index_type,	upper_ci, lower_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size,	prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
+        
+        
+        write.table(write.trend2, 
+                    file = paste(out.dir, site, "_", seas, "_TrendsSlope.csv", sep = ""), 
+                    row.names = FALSE, 
+                    append = TRUE, 
+                    quote = FALSE, 
+                    sep = ",", 
+                    col.names = FALSE)  
+        
+      
       
       ######################################################################################  
       

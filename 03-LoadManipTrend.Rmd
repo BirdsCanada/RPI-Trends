@@ -44,7 +44,7 @@ anal.param <- read.csv("Data/RPI_Analysis_Parameters.csv")
 Select your station/season. 
 ```{r chooseSite}
 
-t <- 10
+t <- 1
 
 ```
 
@@ -78,17 +78,25 @@ From this point forward, we loop through species and season:
 3) Run the trend analysis by looping through year periods (all years, 10-years, and 3-generations)
 
 
-```{r Change Defaults}
+```{r analysis}
 
 source("ii_analysis.R")
 
 ```
 
-## Plot Output
+## Plot Trends 
 
-```{r Change Defaults}
+```{r Plot trends}
 
-source("iii_plot.R")
+source("iii_plottrend.R")
+
+```
+
+## Plot Station Coverage
+
+```{r Plot coverage}
+
+source("iv_plotcoverage.R")
 
 ```
 
@@ -98,6 +106,6 @@ Once you are happy with how everything is going, you may choose to run all the 3
 
 ```{r Loop}
 
-source("iv_loop.R")
+source("v_loop.R")
 
 ```

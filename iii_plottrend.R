@@ -17,7 +17,8 @@ sp.tax<-meta_species_taxonomy()
 sp.tax<-sp.tax %>% select(species_id, sort_order)
 
 # read in trend output
-trnd <- read.csv(paste(out.dir, site, "_", seas, "_Trends.csv", sep = ""))
+trnd <- read.csv(paste(out.dir, site, "_", seas, "_TrendsEndpoint.csv", sep = ""))
+trnds <- read.csv(paste(out.dir, site, "_", seas, "_TrendsSlope.csv", sep = ""))
 
 trnd <- trnd %>%
   filter(!(is.na(species_code)) & period == "all years") %>%
@@ -26,21 +27,38 @@ trnd <- trnd %>%
 options(digits = 2)
 
 sp.trnd <- trnd %>%
-  mutate(sp.trend = paste(species_name, " : ", 
+  mutate(sp.trend = paste(species_name, " \n", "Endpoint: ",
                       round( trnd, digits = 2),  " (", round( lower_ci, digits = 2), ", ",
                       round( upper_ci, digits = 2), ")", sep = "")) %>% 
   select(-trnd, -upper_ci, -lower_ci)
+
+trnd2 <- trnds %>%
+  filter(!(is.na(species_code)) & period == "all years") %>%
+  select(trnd, upper_ci, lower_ci, species_name, species_id, area_code, season)
+
+
+options(digits = 2)
+
+sp.trnd2 <- trnd2 %>%
+  mutate(sp.trend2 = paste("Slope: ", round( trnd, digits = 2),  " (", round( lower_ci, digits = 2), ", ",
+                          round( upper_ci, digits = 2), ")", sep = "")) %>% 
+  select(-trnd, -upper_ci, -lower_ci)
+
+sp.trnd <- full_join(sp.trnd, sp.trnd2, by = c("area_code", "season", "species_name", "species_id"))
+
+sp.trnd<-sp.trnd %>% mutate(sp.trend = paste(sp.trend, " \n", sp.trend2, sep="")) %>% select(-sp.trend2)
 
 # read in annual index output
 index <- read.csv(paste(out.dir, site, "_", seas, "_AnnualIndices.csv", sep = ""))
 
 index <- index %>%
   filter(!is.na(species_code) & period == "all years") %>%
-  select(index, upper_ci, lower_ci, species_name, species_id, year, season, area_code) 
+  select(index, upper_ci, lower_ci, smooth_index, species_name, species_id, year, season, area_code) 
 
 # merge the two
 
 plot.dat <- full_join(index, sp.trnd, by = c("area_code", "season", "species_name", "species_id"))
+
 
 # following is so that order of plots is correct
 plot.dat$sp.trnd <- factor(plot.dat$sp.trend, levels=unique(plot.dat$sp.trend))
@@ -51,6 +69,8 @@ plot.dat<-left_join(plot.dat, sp.tax, by="species_id")
 plot.dat <- plot.dat[order(plot.dat$sort_order),]
 
 sp.list <- as.character(unique(plot.dat$species_name))
+
+#smooth<-plot.dat %>% select(smooth_index, year, sp.trend) %>% rename(index = smooth_index)
 
 out.plot <- NULL
 i <- 1
@@ -65,11 +85,12 @@ j <- 6
       xlab("Year") +
       ylab("Annual Index") +
       theme_bw() +
-      scale_y_continuous(trans="log10") +
-    #  scale_x_continuous(breaks = seq(from = min.yr.filt, to = max.yr.filt, by = 4)) +
-    #  scale_shape_manual(values = c(1,2)) +
+     scale_y_continuous(trans="log10") +
+    # scale_x_continuous(breaks = seq(from = min.yr.filt, to = max.yr.filt, by = 4)) +
+    # scale_shape_manual(values = c(1,2)) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-      theme(legend.position = "none")
+      theme(legend.position = "none") 
+      
   
   i <- i + 6
   j <- j + 6
