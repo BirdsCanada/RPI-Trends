@@ -232,7 +232,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   hyper.iid<-list(prec=list(prior="pc.prec", param=c(2,0.05)))
   
     index.gam<- ObservationCount ~ -1 + Xsmy + Xsdy + DurationInHours + f(fyear, model="iid", hyper=hyper.iid) 
-    index.gamS<- ObservationCount ~ -1 + Xsmy + Xsdy + DurationInHours
+  #  index.gamS<- ObservationCount ~ -1 + Xsmy + Xsdy + DurationInHours
 
   
   ###### RUN ANALYSIS
@@ -270,8 +270,8 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   top.model<-try(inla(index.gam, family = family, data = date.tot, #E = DurationInHours, 
                       control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
-  top.modelS<-try(inla(index.gamS, family = family, data = date.tot, #E = DurationInHours, 
-                       control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
+# top.modelS<-try(inla(index.gamS, family = family, data = date.tot, #E = DurationInHours, 
+#                       control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
 
 
@@ -295,7 +295,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   is.not.null <- function(x) !is.null(x)
   
   if(class(top.model) != 'try-error'& is.not.null(top.model)){
-    if(class(top.modelS) != 'try-error'& is.not.null(top.modelS)){
+ #   if(class(top.modelS) != 'try-error'& is.not.null(top.modelS)){
       
 # ANNUAL INDICES: GENERATED FOR FULL TIME PERIOD ONLY
     
@@ -344,17 +344,17 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       
       #Posterior GAM estimate smoothed (not year effect)     
       
-      post.sample2<-NULL #clear previous
-      post.sample2<-inla.posterior.sample(nsamples, top.modelS)
-      tmp2 <- select(date.tot, species_code, YearCollected, doy, ObservationCount)
+      #post.sample2<-NULL #clear previous
+      #post.sample2<-inla.posterior.sample(nsamples, top.modelS)
+      #tmp2 <- select(date.tot, species_code, YearCollected, doy, ObservationCount)
       
       #for each sample in the posterior we want to join the predicted to tmp so that the predictions line up with doy/year and we can get the mean count by year
-      pred.yr2<-matrix(nrow=nsamples, ncol=nyears)
+      #pred.yr2<-matrix(nrow=nsamples, ncol=nyears)
       
-      for (k in 1:nsamples){
-        tmp2$pred2<-exp(post.sample2[[k]]$latent[1:nrow(date.tot)])
-        pred.yr2[k,]<-t(with(tmp2, aggregate (pred2, list(YearCollected=YearCollected), mean, na.action=na.omit))$x)
-      }
+      #for (k in 1:nsamples){
+      #  tmp2$pred2<-exp(post.sample2[[k]]$latent[1:nrow(date.tot)])
+      #  pred.yr2[k,]<-t(with(tmp2, aggregate (pred2, list(YearCollected=YearCollected), mean, na.action=na.omit))$x)
+      #}
       
       mn.yr1<-NULL
       mn.yr1<-matrix(nrow=nyears, ncol=4)
@@ -403,6 +403,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       #Assing missing data fields 
       mn.yr1$upload_id<-"NULL"
       mn.yr1$stderr<-"NULL"
+      mn.yr1$stdev<-mn.yr1$SD
       mn.yr1$trend_id<-"NULL"
       mn.yr1$smooth_upper_ci<-"NULL"
       mn.yr1$smooth_lower_ci<-"NULL"
@@ -413,7 +414,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       # Run LOESS function
       
       mn.yr2<-NULL
-      mn.yr2 <- mn.yr1 %>% mutate(indexloess = loess_func(index,year))
+      mn.yr2 <- mn.yr1 %>% mutate(LOESS_index = loess_func(index,year))
       
       raw.obs<-date.tot %>% select(YearCollected, ObservationCount, DurationInHours) %>% group_by(YearCollected) %>% summarise(meanObs=mean(ObservationCount)) %>% dplyr::rename(year=YearCollected)
       
@@ -422,18 +423,16 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       # Order output before printing to table
       
       #mn.yr2<-mn.yr2 %>% select (upload_id,	results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	year,	season,	period,	species_id,	index,	stderr,	SD,	upper_ci,	lower_ci,	trend_id,	indexloess,	smooth_upper_ci,	smooth_lower_ci,	upload_dt,	error, meanObs, family)
-      mn.yr2<-mn.yr2 %>% select(results_code, version, area_code, year,season, period, species_code, species_id, index,stderr, stdev,upper_ci, lower_ci, LOESS_index, species_name, species_sci_name)
+      mn.yr2<-mn.yr2 %>% select(results_code, version, area_code, year,season, period, species_code, species_id, index, stderr, stdev, upper_ci, lower_ci, LOESS_index, species_name, species_sci_name)
       
       mean.index<-mean(mn.yr2$index)
       
       #Because some models produce extreme results (likely because of poor model fit) we will not write this to the output file nor will we run trends for these speceis/seasons.   
       
       
-      if(mean.index>=1000 &  mean.index<=.0001){ 
-        
-        mn.yr2$error<-"index estimation error"
-        
-      }
+    # if(mean.index>=1000 &  mean.index<=.0001){ 
+    #    mn.yr2$error<-"index estimation error"
+    #      }
       
       # Write data to table
       write.table(mn.yr2, 
@@ -505,16 +504,16 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         y1 <- y1.trend[p]
         y2 <- y2.trend[p]
         
-        pred.ch<-pred.yr2[,c(y1, y2)] 
+        pred.ch<-pred.yr[,c(y1, y2)] 
         pred.ch<-as.data.frame(pred.ch) 
         pred.ch<-pred.ch %>% mutate(ch=(V2/V1), max_year=Y2, min_year=Y1, tr=(100*((ch^(1/(max_year-min_year)))-1)))
-        pred.ch<-pred.ch %>% reframe(Trend=median(tr), percent_change=100*(median(ch)-1), Trend_Q_0.025=quantile(tr, probs=0.025), Trend_Q_0.95=quantile(tr, probs=0.95), sd=sd(tr), Width_of_Credible_Interval=Trend_Q_0.95-Trend_Q_0.025) %>% distinct()
+        pred.ch<-pred.ch %>% reframe(trnd=median(tr), percent_change=100*(median(ch)-1), lower_ci=quantile(tr, probs=0.025), upper_ci=quantile(tr, probs=0.95), sd=sd(tr), Width_of_Credible_Interval=upper_ci-lower_ci) %>% distinct()
         
         #Estimate the slope trend base 
         
         # Summary of the GAM smooth on year
          wy=c(y1:y2)
-         ne = log(pred.yr2[,wy]) #these are the smoothed indices
+         ne = log(pred.yr[,wy]) #these are the smoothed indices
         
         #This is the slope function. 
         #It calculates the coefficient of the lm slope for each row in the smoothed output. 
@@ -547,8 +546,8 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
           mutate(model_type="GAM", 
                  model_family = family,
                  years = paste(Y1, "-", Y2, sep = ""),
-                 min_year=Y1, 
-                 max_year=Y2,
+                 year_start=Y1, 
+                 year_end=Y2,
                  period =period,
                  season = seas,
                  results_code = results.code,
@@ -613,15 +612,15 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         
         #include slop output in new table
         trend.out$index_type="slope"
-        trend.out$Trend<-median(m, na.rm=TRUE)
-        trend.out$Trend_Q_0.025<-quantile(m, prob=0.025)
-        trend.out$Trend_Q_0.95<-quantile(m, prob=0.950)
+        trend.out$trnd<-median(m, na.rm=TRUE)
+        trend.out$lower_ci<-quantile(m, prob=0.025)
+        trend.out$upper_ci<-quantile(m, prob=0.950)
         trend.out$sd<-sd(m, na.rm=TRUE)
         
-        per_trend=trend.out$Trend/100
+        per_trend=trend.out$trnd/100
         period_num=Y2-Y1
         trend.out$percent_change<-((1+per_trend)^period_num-1)*100
-        trend.out$Width_of_Credible_Interval_slope<-trend.out$Trend_Q_0.95-trend.out$Trend_Q_0.025
+        trend.out$Width_of_Credible_Interval_slope<-trend.out$upper_ci-trend.out$lower_ci
         trend.out$precision_cat = ifelse(pred.ch$Width_of_Credible_Interval<3.5, "High", ifelse(pred.ch$Width_of_Credible_Interval>=3.5 & pred.ch$Width_of_Credible_Interval<=6.7, "Medium", "Low"))
        
         #write.trend2<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	species_id,	season,	period,	years,	min_year, max_year, Trend, index_type,	Trend_Q_0.025, Trend_Q_0.95, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	Width_of_Credible_Interval,	precision_cat,	coverage_num,	coverage_cat,	goal,	goal_lower,	sample_size,	sample_total,	subtitle,	pval,	pval_str,	post_prob,	trnd_order,	dq,	slope_trend,	prob_LD,	prob_MD,	prob_LC,	prob_MI,	prob_LI,	quantile_050,	quantile_165,	quantile_835,	quantile_950,	trend_id,	upload_dt,	error, sd)
@@ -641,7 +640,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       ######################################################################################  
       
   } # end length time period       
-  } # end try error trend top.modelS 
+ # } # end try error trend top.modelS 
   } # end try error trend top.model 
   } # nrow (tmp)>10
   } # nrow(min.yrs)>0
