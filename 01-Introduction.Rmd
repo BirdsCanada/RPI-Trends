@@ -31,5 +31,5 @@ For more information and results, please visit the Raptor Population Index websi
 
 ## Author Notes
 
-Version: July 2023
+Version: December 2023
 Author: Danielle Ethier, Population Scientist, Birds Canada, dethier@birdscanada.org

@@ -4,6 +4,11 @@
 in.dir <- paste("./Data/", max.yr, "/", sep = "")
 plot.dir <- paste("./Plots/", max.yr, "/", sep = "")
 
+site <- as.character(anal.param[t, "SiteCode"])
+seas <- as.character(anal.param[t,"seas"])
+name<-as.character(anal.param[t,"site"])
+
+
 ## Including Plots
 #Plot using raw data the station coverage plots
 
@@ -39,6 +44,15 @@ plot.dir <- paste("./Plots/", max.yr, "/", sep = "")
   
   tmp.data<-tmp.data %>% drop_na(species_code)
   
+  #truncate spring and fall data
+  if(seas =="fall"){
+  tmp.data<-tmp.data %>% filter(doy>=213)
+  }
+  
+    if(seas =="spring"){
+    tmp.data<-tmp.data %>% filter(doy>=32 & doy <=181)
+  }
+  
   if(site == "484"){
     tmp.data <- tmp.data %>%  filter (!(species_code == "BLVU"),
                                       !(species_code == "TUVU")) %>% 
@@ -65,7 +79,7 @@ plot.dir <- paste("./Plots/", max.yr, "/", sep = "")
   obsHours <- unique(subset(obsHours, select = c("YearCollected", "DurationInHours")))
   obsHours <- summaryBy(DurationInHours ~ YearCollected, data = obsHours, FUN = c(mean))
   
-  pdf(paste(plot.dir, site, ".", seas, ".SamplingCoverPlot.pdf", sep=""),
+  pdf(paste(plot.dir, site, "_", seas, "_", name, "_SamplingCoverPlot.pdf", sep=""),
       height = 10, width = 8, paper = "letter")
   par(mfrow = c(3, 1))
   plot(doy.length ~ YearCollected, data = obsDays, 

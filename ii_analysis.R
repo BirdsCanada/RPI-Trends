@@ -53,6 +53,8 @@ if(site == "484"){
 }
 
 
+tmp.data$DurationInHours<-as.numeric(tmp.data$DurationInHours)
+
 #create events data for zero filling
 event.data <- tmp.data %>%
   filter(ObservationCount > 0) %>%
@@ -141,7 +143,7 @@ if(nrow(date.tot)>0){   #only continue if data remains after migration window fi
   
   #print window to file
   
-  write.table(windows, file = paste(out.dir, site, "_", seas, "_SeasonalWindows.csv", sep = ""), row.names = FALSE, append = TRUE, quote = FALSE, sep = ",", col.names = FALSE)
+ # write.table(windows, file = paste(out.dir, site, "_", seas, "_SeasonalWindows.csv", sep = ""), row.names = FALSE, append = TRUE, quote = FALSE, sep = ",", col.names = FALSE)
     
   # drop species not detect in 1/2 of all years
   
