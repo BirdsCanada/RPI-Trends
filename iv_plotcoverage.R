@@ -79,6 +79,8 @@ name<-as.character(anal.param[t,"site"])
   obsHours <- unique(subset(obsHours, select = c("YearCollected", "DurationInHours")))
   obsHours <- summaryBy(DurationInHours ~ YearCollected, data = obsHours, FUN = c(mean))
   
+  maxhours<-max(obsHours$DurationInHours.mean)
+  
   pdf(paste(plot.dir, site, "_", seas, "_", name, "_SamplingCoverPlot.pdf", sep=""),
       height = 10, width = 8, paper = "letter")
   par(mfrow = c(3, 1))
@@ -93,8 +95,8 @@ name<-as.character(anal.param[t,"site"])
          col = "grey50", pch = 1, cex = 1)
   plot(DurationInHours.mean ~ YearCollected, data = obsHours, 
        ylab = "Mean # hours sampled/day", xlab = "Year",
-       col = "black", pch = 20, cex = 1)
-  dev.off()
-
+       col = "black", pch = 20, cex = 1, ylim=c(0, maxhours))
+  
+  while(!is.null(dev.list())) dev.off()
 
 
