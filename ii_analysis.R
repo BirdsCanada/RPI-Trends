@@ -232,12 +232,12 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   
   #Use penalised complex prior for random year effect
   hyper.iid<-list(prec=list(prior="pc.prec", param=c(2,0.05)))
+  inla.setOption(scale.model.default=TRUE)
   
     index.gam<- ObservationCount ~ -1 + Xsmy + Xsdy + DurationInHours + f(fyear, model="iid", hyper=hyper.iid) 
-  #  index.gamS<- ObservationCount ~ -1 + Xsmy + Xsdy + DurationInHours
+    index.gamS<- ObservationCount ~ - 1 + Xsmy + Xsdy + DurationInHours
 
-  
-  ###### RUN ANALYSIS
+   ###### RUN ANALYSIS
   
   #Run nbinomial, poisson, zip model. Select the model with the lowest DIC.                
   
@@ -272,8 +272,8 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   top.model<-try(inla(index.gam, family = family, data = date.tot, #E = DurationInHours, 
                       control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
-# top.modelS<-try(inla(index.gamS, family = family, data = date.tot, #E = DurationInHours, 
-#                       control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
+  top.modelS<-try(inla(index.gamS, family = family, data = date.tot, #E = DurationInHours, 
+                       control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
 
 
@@ -301,17 +301,40 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       
 # ANNUAL INDICES: GENERATED FOR FULL TIME PERIOD ONLY
     
-      
       # Summary of the GAM smooth on year
       # I have checked that this is reflected in the latent posterior samples. Looks good. 
       
+      #CR<-NULL
       #nr<-nrow(date.tot) #Year is stored first in the lc output
-      #smooth<-top.modelS$summary.lincomb.derived
+ 
+      #f.yr<-smooth[1:nr+0*nr, "mean"]
+      #selo.yr<-smooth[1:nr+0*nr, "0.025quant"]
+      #seup.yr<-smooth[1:nr+0*nr, "0.975quant"]
+      
+      #f.doy<-smooth[1:nr+1*nr, "mean"]
+      #selo.doy<-smooth[1:nr+1*nr, "0.025quant"]
+      #seup.doy<-smooth[1:nr+1*nr, "0.975quant"]
+      
+      #oyr<-order(date.tot$fyear)
+      #odoy<-order(date.tot$doyfac)
+     
+      #MyData <- data.frame(
+      #  mu   = c(   f.yr[oyr],    f.doy[odoy]), 
+      #  SeUp = c(seup.yr[oyr], seup.doy[odoy]), 
+      #  SeLo = c(selo.yr[oyr], selo.doy[odoy]), 
+      #  Xaxis = c(sort(date.tot$fyear), sort(date.tot$doyfac)),
+      #  ID    = factor(rep(c("Velocity smoother", "Depth smoother"), each = nrow(date.tot))))
+      
+      
+     ##OLD 
+     #smooth<-top.modelS$summary.lincomb.derived
+     #intercept<-top.modelS[["summary.fixed"]][["mean"]][[1]]
+   
       #f<-exp(smooth[1:nr, "mean"])
       #SeLo<-exp(smooth[1:nr, "0.025quant"])
       #SeUp<-exp(smooth[1:nr, "0.975quant"]) 
       #CR<-data.frame(mu=f, SeUp=SeUp, SeLo=SeLo, ObservationCount=date.tot$ObservationCount, Year=date.tot$YearCollected)
-      #CR<-CR %>% group_by(Year) %>% summarise(meanCR=mean(mu), meanSeUp = mean(SeUp), meanSeLo=mean(SeLo)) 
+      #CR<-CR %>% group_by(Year) %>% summarise(meanCR=mean(mu), meanSeUp = mean(SeUp), meanSeLo=mean(SeLo), raw=mean(ObservationCount)) 
       
       # Summary of the GAM smooth on year
       # I have checked that this is reflected in the latent posterior samples. Looks good. 
@@ -333,16 +356,19 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       nsamples<- 1000  
       post.sample1 <-NULL #clear previous
       post.sample1<-inla.posterior.sample(nsamples, top.model)
-      tmp1 <- select(date.tot, species_code, YearCollected, doy, ObservationCount)
+
+      tmp1 <- select(date.tot, YearCollected)
       
       #for each sample in the posterior we want to join the predicted to tmp so that the predictions line up with doy/year and we can get the mean count by year
-      pred.yr<-matrix(nrow=nsamples, ncol=nyears)
-      
-      for (k in 1:nsamples){
-        tmp1$pred<-exp(post.sample1[[k]]$latent[1:nrow(date.tot)])
-        pred.yr[k,]<-t(with(tmp1, aggregate (pred, list(YearCollected=YearCollected), mean, na.action=na.omit))$x)
-        
+      for (h in 1:nsamples){
+        pred<-exp(post.sample1[[h]]$latent[1:nrow(date.tot)])
+        tmp1[ncol(tmp1)+1]<-pred
       }
+      ###HERE###
+      tmp1<-tmp1 %>% group_by(YearCollected) %>% summarise_all(mean, na.rm=TRUE)
+      
+      
+      #tmp1$means<-rowMeans(tmp1[, 5:1004])
       
       #Posterior GAM estimate smoothed (not year effect)     
       
@@ -357,19 +383,20 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       #  tmp2$pred2<-exp(post.sample2[[k]]$latent[1:nrow(date.tot)])
       #  pred.yr2[k,]<-t(with(tmp2, aggregate (pred2, list(YearCollected=YearCollected), mean, na.action=na.omit))$x)
       #}
+      #mn.yr1<-matrix(nrow=nyears, ncol=4)
+      #for(g in 1:nyears){
+      #  mn.yr1[g,1]<-median(pred.yr[,g], na.rm=TRUE)
+      #  mn.yr1[g,2]<-quantile(pred.yr[,g], 0.025, na.rm=TRUE)
+      #  mn.yr1[g,3]<-quantile(pred.yr[,g], 0.975, na.rm=TRUE)
+      #  mn.yr1[g,4]<-sd(pred.yr[,g], na.rm=TRUE)
+      #}
+      #mn.yr1 <- as.data.frame(mn.yr1)
+      #names(mn.yr1) <- c("index", "lower_ci", "upper_ci", "SD")
       
       mn.yr1<-NULL
-      mn.yr1<-matrix(nrow=nyears, ncol=4)
+      mn.yr1<-tmp1 %>% select(species_code, YearCollected, doy, means, ObservationCount)
+      mn.yr1<-mn.yr1 %>% group_by(species_code, YearCollected) %>% summarise(index=mean(means, na.rm=TRUE), stdev = sd(means, na.rm=TRUE), upper_ci=quantile(means, probs = 0.975), lower_ci=quantile(means, probs = 0.025), meanraw=mean(ObservationCount))
       
-      for(g in 1:nyears){
-        mn.yr1[g,1]<-median(pred.yr[,g], na.rm=TRUE)
-        mn.yr1[g,2]<-quantile(pred.yr[,g], 0.025, na.rm=TRUE)
-        mn.yr1[g,3]<-quantile(pred.yr[,g], 0.975, na.rm=TRUE)
-        mn.yr1[g,4]<-sd(pred.yr[,g], na.rm=TRUE)
-      }
-      
-      mn.yr1 <- as.data.frame(mn.yr1)
-      names(mn.yr1) <- c("index", "lower_ci", "upper_ci", "SD")
       
     #     mn.yrS<-NULL
     #     mn.yrS<-matrix(nrow=nyears, ncol=4)
@@ -405,13 +432,14 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       #Assing missing data fields 
       mn.yr1$upload_id<-"NULL"
       mn.yr1$stderr<-"NULL"
-      mn.yr1$stdev<-mn.yr1$SD
+      mn.yr1$stdev<-mn.yr1$stdev
       mn.yr1$trend_id<-"NULL"
       mn.yr1$smooth_upper_ci<-"NULL"
       mn.yr1$smooth_lower_ci<-"NULL"
       mn.yr1$smooth_upper_ci<-"NULL"
       mn.yr1$upload_dt<-"NULL"
       mn.yr1$family<-family
+      mn.yr1$trend_index<-""
       
       # Run LOESS function
       
@@ -425,7 +453,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       # Order output before printing to table
       
       #mn.yr2<-mn.yr2 %>% select (upload_id,	results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	year,	season,	period,	species_id,	index,	stderr,	SD,	upper_ci,	lower_ci,	trend_id,	indexloess,	smooth_upper_ci,	smooth_lower_ci,	upload_dt,	error, meanObs, family)
-      mn.yr2<-mn.yr2 %>% select(results_code, version, area_code, year,season, period, species_code, species_id, index, stderr, stdev, upper_ci, lower_ci, LOESS_index, species_name, species_sci_name)
+      mn.yr2<-mn.yr2 %>% select(results_code, version, area_code, season, period, species_code, species_id, year, index, stderr, stdev, upper_ci, lower_ci, LOESS_index, trend_index)
       
       mean.index<-mean(mn.yr2$index)
       
@@ -506,7 +534,27 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         y1 <- y1.trend[p]
         y2 <- y2.trend[p]
         
-        pred.ch<-pred.yr[,c(y1, y2)] 
+        
+        #Prediction of the smooth model
+        nsamples<- 1000  
+        post.sample2 <-NULL #clear previous
+        post.sample2<-inla.posterior.sample(nsamples, top.modelS)
+        
+        tmp2 <- select(date.tot, YearCollected)
+        
+        #for each sample in the posterior we want to join the predicted to tmp so that the predictions line up with doy/year and we can get the mean count by year
+        for (h in 1:nsamples){
+          pred<-exp(post.sample1[[h]]$latent[1:nrow(date.tot)])
+          tmp2[ncol(tmp2)+1]<-pred
+        }
+        
+        ###HERE###
+        tmp2<-tmp2 %>% group_by(YearCollected) %>% summarise_all(mean, na.rm=TRUE)
+        
+        pred.ch<-tmp2 %>% select(species_code, YearCollected, doy, means, ObservationCount)
+        
+        
+        pred.yr<-pred.ch[,c(y1, y2)] 
         pred.ch<-as.data.frame(pred.ch) 
         pred.ch<-pred.ch %>% mutate(ch=(V2/V1), max_year=Y2, min_year=Y1, tr=(100*((ch^(1/(max_year-min_year)))-1)))
         pred.ch<-pred.ch %>% reframe(trnd=median(tr), percent_change=100*(median(ch)-1), lower_ci=quantile(tr, probs=0.025), upper_ci=quantile(tr, probs=0.95), sd=sd(tr), Width_of_Credible_Interval=upper_ci-lower_ci) %>% distinct()
@@ -601,8 +649,8 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
                  upload_dt = "NULL")
         
        #write.trend<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	species_id,	season,	period,	years,	min_year, max_year, Trend, index_type,	Trend_Q_0.025, Trend_Q_0.95, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	Width_of_Credible_Interval,	precision_cat,	coverage_num,	coverage_cat,	goal,	goal_lower,	sample_size,	sample_total,	subtitle,	pval,	pval_str,	post_prob,	trnd_order,	dq,	slope_trend,	prob_LD,	prob_MD,	prob_LC,	prob_MI,	prob_LI,	quantile_050,	quantile_165,	quantile_835,	quantile_950,	trend_id,	upload_dt,	error, sd)
-        write.trend<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_id,	season,	period,	years,	year_start,	year_end,	trnd,	index_type,	upper_ci, lower_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size,	prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
-
+        write.trend<-trend.out %>% select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
+        
         
         write.table(write.trend, 
                     file = paste(out.dir, site, "_", seas, "_TrendsEndpoint.csv", sep = ""), 

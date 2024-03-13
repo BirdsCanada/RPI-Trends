@@ -77,7 +77,7 @@ write.csv(bad_dates, "Data/bad_dates.csv", row.names = FALSE)
 
 ##Load generation length table
 
-gen<-nc_query_table(username=ID, "vwResultsSocbSpecies")
+gen<-nc_query_table(username=ID, "SocbSpecies")
 gen<-gen %>% select(speciesID, generation)
 write.csv(gen, "Data/generation.csv")
 
