@@ -28,6 +28,7 @@ trnds <- read.csv(paste(out.dir, site, "_", seas, "_TrendsSlope.csv", sep = ""))
 #  select(trnd, upper_ci, lower_ci, species_code, species_id, area_code, season)
 
 #trnd<-left_join(trnd, sp.tax, by="species_id")
+
 trnds<-left_join(trnds, sp.tax, by="species_id")
 
 options(digits = 2)

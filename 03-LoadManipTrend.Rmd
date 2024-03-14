@@ -1,3 +1,8 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 # Trends
 
 ```{r tidyr3, echo = FALSE, message = FALSE, warning = FALSE}
@@ -18,7 +23,7 @@ Also assign max year of the analysis. Generally, the data in NatureCounts are 2 
 
 ```{r setup}
 
-max.yr <- 2022 #needs changes with each analysis
+max.yr <- 2023 #needs changes with each analysis
 ID<- "dethier" #change this to your user ID. You will be prompted for a password. 
 
 ```
@@ -44,7 +49,7 @@ anal.param <- read.csv("Data/RPI_Analysis_Parameters.csv")
 Select your station/season. 
 ```{r chooseSite}
 
-t <- 3
+t <- 1
 
 ```
 

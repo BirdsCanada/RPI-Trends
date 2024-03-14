@@ -22,7 +22,7 @@ write.csv(data, paste(data.dir, site, ".", seas, ".RawData.csv", sep = ""), row.
 
 } #end of try catch, which looks for proceed data on the data.dir first
 
-tmp.data<-NULL
+tmp.data<-
 
 tmp.data<-data %>% format_dates()
 tmp.data <- tmp.data %>% select(SiteCode, project_id, YearCollected, MonthCollected, DayCollected, doy, TimeCollected, DurationInHours, species_id, ObservationCount)
@@ -357,6 +357,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       post.sample1 <-NULL #clear previous
       post.sample1<-inla.posterior.sample(nsamples, top.model)
 
+      tmp1<-NULL
       tmp1 <- select(date.tot, YearCollected)
       
       #for each sample in the posterior we want to join the predicted to tmp so that the predictions line up with doy/year and we can get the mean count by year
@@ -364,58 +365,11 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         pred<-exp(post.sample1[[h]]$latent[1:nrow(date.tot)])
         tmp1[ncol(tmp1)+1]<-pred
       }
-      ###HERE###
+      
       tmp1<-tmp1 %>% group_by(YearCollected) %>% summarise_all(mean, na.rm=TRUE)
-      
-      
-      #tmp1$means<-rowMeans(tmp1[, 5:1004])
-      
-      #Posterior GAM estimate smoothed (not year effect)     
-      
-      #post.sample2<-NULL #clear previous
-      #post.sample2<-inla.posterior.sample(nsamples, top.modelS)
-      #tmp2 <- select(date.tot, species_code, YearCollected, doy, ObservationCount)
-      
-      #for each sample in the posterior we want to join the predicted to tmp so that the predictions line up with doy/year and we can get the mean count by year
-      #pred.yr2<-matrix(nrow=nsamples, ncol=nyears)
-      
-      #for (k in 1:nsamples){
-      #  tmp2$pred2<-exp(post.sample2[[k]]$latent[1:nrow(date.tot)])
-      #  pred.yr2[k,]<-t(with(tmp2, aggregate (pred2, list(YearCollected=YearCollected), mean, na.action=na.omit))$x)
-      #}
-      #mn.yr1<-matrix(nrow=nyears, ncol=4)
-      #for(g in 1:nyears){
-      #  mn.yr1[g,1]<-median(pred.yr[,g], na.rm=TRUE)
-      #  mn.yr1[g,2]<-quantile(pred.yr[,g], 0.025, na.rm=TRUE)
-      #  mn.yr1[g,3]<-quantile(pred.yr[,g], 0.975, na.rm=TRUE)
-      #  mn.yr1[g,4]<-sd(pred.yr[,g], na.rm=TRUE)
-      #}
-      #mn.yr1 <- as.data.frame(mn.yr1)
-      #names(mn.yr1) <- c("index", "lower_ci", "upper_ci", "SD")
-      
+      tmp1<-tmp1 %>% rowwise() %>% mutate(index = median(c_across(V2:V1001)), lower_ci=quantile(c_across(V2:V1001), 0.025), upper_ci=quantile(c_across(V2:V1001), 0.975), stdev=sd(c_across(V2:V1001))) 
       mn.yr1<-NULL
-      mn.yr1<-tmp1 %>% select(species_code, YearCollected, doy, means, ObservationCount)
-      mn.yr1<-mn.yr1 %>% group_by(species_code, YearCollected) %>% summarise(index=mean(means, na.rm=TRUE), stdev = sd(means, na.rm=TRUE), upper_ci=quantile(means, probs = 0.975), lower_ci=quantile(means, probs = 0.025), meanraw=mean(ObservationCount))
-      
-      
-    #     mn.yrS<-NULL
-    #     mn.yrS<-matrix(nrow=nyears, ncol=4)
-    #  
-    #      for(g in 1:nyears){
-    #       mn.yrS[g,1]<-mean(pred.yr2[,g], na.rm=TRUE)
-    #        mn.yrS[g,2]<-quantile(pred.yr2[,g], 0.025, na.rm=TRUE)
-    #        mn.yrS[g,3]<-quantile(pred.yr2[,g], 0.975, na.rm=TRUE)
-    #        mn.yrS[g,4]<-sd(pred.yr2[,g], na.rm=TRUE)
-    #      }
-      
-    #  mn.yrS <- as.data.frame(mn.yrS)
-    #  names(mn.yrS) <- c("index_smooth", "lower_ci_smooth", "upper_ci_smooth", "SD_smooth")
-      
-    #  mn.yr1$index_smooth<-mn.yrS$index_smooth
-    #  mn.yr1$lower_ci_smooth<-mn.yrS$lower_ci_smooth
-    #  mn.yr1$upper_ci_smooth<-mn.yrS$upper_ci_smooth
-    #  mn.yr1$SD_smooth<-mn.yrS$SD_smooth
-      
+      mn.yr1<-tmp1 %>% select(YearCollected, index, lower_ci, upper_ci, stdev)
       mn.yr1$species_code <- species
       mn.yr1$years <- paste(min(date.tot$YearCollected), "-", max(date.tot$YearCollected), sep = "")
       mn.yr1$year <- sort(unique(date.tot$YearCollected))
@@ -428,44 +382,31 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       mn.yr1$version<-max.yr
       mn.yr1$species_name<-sp.nam$english_name
       mn.yr1$species_sci_name<-sp.nam$scientific_name
-      mn.yr1$error<-"NULL"
+      mn.yr1$error<-""
       #Assing missing data fields 
-      mn.yr1$upload_id<-"NULL"
-      mn.yr1$stderr<-"NULL"
+      mn.yr1$upload_id<-""
+      mn.yr1$stderr<-""
       mn.yr1$stdev<-mn.yr1$stdev
-      mn.yr1$trend_id<-"NULL"
-      mn.yr1$smooth_upper_ci<-"NULL"
-      mn.yr1$smooth_lower_ci<-"NULL"
-      mn.yr1$smooth_upper_ci<-"NULL"
-      mn.yr1$upload_dt<-"NULL"
+      mn.yr1$trend_id<-""
+      mn.yr1$smooth_upper_ci<-""
+      mn.yr1$smooth_lower_ci<-""
+      mn.yr1$smooth_upper_ci<-""
+      mn.yr1$upload_dt<-""
       mn.yr1$family<-family
-      mn.yr1$trend_index<-""
       
       # Run LOESS function
       
-      mn.yr2<-NULL
-      mn.yr2 <- mn.yr1 %>% mutate(LOESS_index = loess_func(index,year))
+      mn.yr1$LOESS_index = loess_func(mn.yr1$index, mn.yr1$year)
       
-      raw.obs<-date.tot %>% select(YearCollected, ObservationCount, DurationInHours) %>% group_by(YearCollected) %>% summarise(meanObs=mean(ObservationCount)) %>% dplyr::rename(year=YearCollected)
-      
-      mn.yr2<-left_join(mn.yr2, raw.obs, by="year")
+      mn.yr1$trend_index<-""
      
       # Order output before printing to table
       
       #mn.yr2<-mn.yr2 %>% select (upload_id,	results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	year,	season,	period,	species_id,	index,	stderr,	SD,	upper_ci,	lower_ci,	trend_id,	indexloess,	smooth_upper_ci,	smooth_lower_ci,	upload_dt,	error, meanObs, family)
-      mn.yr2<-mn.yr2 %>% select(results_code, version, area_code, season, period, species_code, species_id, year, index, stderr, stdev, upper_ci, lower_ci, LOESS_index, trend_index)
+      mn.yr1<-mn.yr1 %>% select(results_code, version, area_code, season, period, species_code, species_id, year, index, stderr, stdev, upper_ci, lower_ci, LOESS_index, trend_index)
       
-      mean.index<-mean(mn.yr2$index)
-      
-      #Because some models produce extreme results (likely because of poor model fit) we will not write this to the output file nor will we run trends for these speceis/seasons.   
-      
-      
-    # if(mean.index>=1000 &  mean.index<=.0001){ 
-    #    mn.yr2$error<-"index estimation error"
-    #      }
-      
-      # Write data to table
-      write.table(mn.yr2, 
+       # Write data to table
+      write.table(mn.yr1, 
                   file = paste(out.dir,	site, "_", seas, "_AnnualIndices.csv", sep = ""),
                   row.names = FALSE, 
                   append = TRUE, 
@@ -544,52 +485,19 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         
         #for each sample in the posterior we want to join the predicted to tmp so that the predictions line up with doy/year and we can get the mean count by year
         for (h in 1:nsamples){
-          pred<-exp(post.sample1[[h]]$latent[1:nrow(date.tot)])
+          pred<-exp(post.sample2[[h]]$latent[1:nrow(date.tot)])
           tmp2[ncol(tmp2)+1]<-pred
         }
         
-        ###HERE###
         tmp2<-tmp2 %>% group_by(YearCollected) %>% summarise_all(mean, na.rm=TRUE)
         
-        pred.ch<-tmp2 %>% select(species_code, YearCollected, doy, means, ObservationCount)
+        pred.ch<-tmp2 %>% filter(YearCollected %in% c(Y1, Y2)) %>% select(-YearCollected)
+        pred.ch<-t(pred.ch)
+        pred.ch<-as.data.frame(pred.ch)
         
-        
-        pred.yr<-pred.ch[,c(y1, y2)] 
-        pred.ch<-as.data.frame(pred.ch) 
         pred.ch<-pred.ch %>% mutate(ch=(V2/V1), max_year=Y2, min_year=Y1, tr=(100*((ch^(1/(max_year-min_year)))-1)))
         pred.ch<-pred.ch %>% reframe(trnd=median(tr), percent_change=100*(median(ch)-1), lower_ci=quantile(tr, probs=0.025), upper_ci=quantile(tr, probs=0.95), sd=sd(tr), Width_of_Credible_Interval=upper_ci-lower_ci) %>% distinct()
         
-        #Estimate the slope trend base 
-        
-        # Summary of the GAM smooth on year
-         wy=c(y1:y2)
-         ne = log(pred.yr[,wy]) #these are the smoothed indices
-        
-        #This is the slope function. 
-        #It calculates the coefficient of the lm slope for each row in the smoothed output. 
-        
-        #slope function 1 
-         slope  <-  function(x){
-           return(coef(lm(x~I(y1:y2)))[2])
-         }
-        
-         m =  apply(ne,1,slope)
-         m = as.vector((exp(m)-1)*100)
-         
-        #slope function 2 (gives same result as above)
-         
-        # bsl = function(i){
-        #   n = length(wy)
-        #   sy = sum(i)
-        #   sx = sum(wy)
-        #   ssx = sum(wy^2)
-        #   sxy = sum(i*wy)
-        #   b = (n*sxy - sx*sy)/(n*ssx - sx^2)
-        #   return(b)
-        # } 
-        #  m2 =  t(apply(ne,1,FUN = bsl))
-        #  m2 = as.vector((exp(m2)-1)*100)
-         
         #write output to table   
         trend.out<-NULL
         trend.out <- pred.ch %>%
@@ -608,45 +516,46 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
                  index_type="endpoint", 
                  species_name=sp.nam$english_name,
                  species_sci_name=sp.nam$scientific_name,
-                 error=unique(mn.yr2$error), 
-                 stderr = "NULL", 
-                 model_fit = "NULL", 	
-                 percent_change_low ="NULL", 
-                 percent_change_high = "NULL",
-                 prob_decrease_0 = "NULL",
-                 prob_decrease_25 = "NULL",
-                 prob_decrease_30 = "NULL",
-                 prob_decrease_50 = "NULL",
-                 prob_increase_0 = "NULL",
-                 prob_increase_33 = "NULL",	
-                 prob_increase_100 = "NULL",
-                 confidence = "NULL",
-                 precision_num = "NULL",
+                 stderr = "", 
+                 model_fit = "", 	
+                 percent_change_low ="", 
+                 percent_change_high = "",
+                 prob_decrease_0 = "",
+                 prob_decrease_25 = "",
+                 prob_decrease_30 = "",
+                 prob_decrease_50 = "",
+                 prob_increase_0 = "",
+                 prob_increase_33 = "",	
+                 prob_increase_100 = "",
+                 confidence = "",
+                 precision_num = "",
+                 suitability="",
                  precision_cat = ifelse(pred.ch$Width_of_Credible_Interval<3.5, "High", ifelse(pred.ch$Width_of_Credible_Interval>=3.5 & pred.ch$Width_of_Credible_Interval<=6.7, "Medium", "Low")),
-                 coverage_num = "NULL",
-                 coverage_cat = "NULL",
-                 goal = "NULL",
-                 goal_lower = "NULL",
-                 sample_size = "NULL",
-                 sample_total = "NULL",
-                 subtitle = "NULL",
-                 pval = "NULL",
-                 pval_str = "NULL",
-                 post_prob = "NULL",
-                 trnd_order = "NULL",
-                 dq = "NULL",
+                 coverage_num = "",
+                 coverage_cat = "",
+                 goal = "",
+                 goal_lower = "",
+                 sample_size = "",
+                 sample_size_units="",
+                 sample_total = "",
+                 subtitle = "",
+                 pval = "",
+                 pval_str = "",
+                 post_prob = "",
+                 trnd_order = "",
+                 dq = "",
                  slope_trend = median(m, na.rm=TRUE),
-                 prob_LD = "NULL",
-                 prob_MD = "NULL",
-                 prob_LC = "NULL",
-                 prob_MI = "NULL",
-                 prob_LI = "NULL",
-                 quantile_050 = "NULL",
-                 quantile_165 = "NULL",
-                 quantile_835 = "NULL",
-                 quantile_950 = "NULL",
-                 trend_id = "NULL",
-                 upload_dt = "NULL")
+                 prob_LD = "",
+                 prob_MD = "",
+                 prob_LC = "",
+                 prob_MI = "",
+                 prob_LI = "",
+                 quantile_050 = "",
+                 quantile_165 = "",
+                 quantile_835 = "",
+                 quantile_950 = "",
+                 trend_id = "",
+                 upload_dt = "")
         
        #write.trend<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	species_id,	season,	period,	years,	min_year, max_year, Trend, index_type,	Trend_Q_0.025, Trend_Q_0.95, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	Width_of_Credible_Interval,	precision_cat,	coverage_num,	coverage_cat,	goal,	goal_lower,	sample_size,	sample_total,	subtitle,	pval,	pval_str,	post_prob,	trnd_order,	dq,	slope_trend,	prob_LD,	prob_MD,	prob_LC,	prob_MI,	prob_LI,	quantile_050,	quantile_165,	quantile_835,	quantile_950,	trend_id,	upload_dt,	error, sd)
         write.trend<-trend.out %>% select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
@@ -659,6 +568,41 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
                     quote = FALSE, 
                     sep = ",", 
                     col.names = FALSE)  
+        
+        
+        #Estimate the slope trend base 
+        
+        # Summary of the GAM smooth on year
+        wy=c(y1:y2)
+        pred.yr<-tmp2 %>% select(-YearCollected)
+        pred.yr<-t(pred.yr)
+        ne = log(pred.yr[,wy]) #these are the smoothed indices
+        
+        #This is the slope function. 
+        #It calculates the coefficient of the lm slope for each row in the smoothed output. 
+        
+        #slope function 1 
+        slope  <-  function(x){
+          return(coef(lm(x~I(y1:y2)))[2])
+        }
+        
+        m =  apply(ne,1,slope)
+        m = as.vector((exp(m)-1)*100)
+        
+        #slope function 2 (gives same result as above)
+        
+        # bsl = function(i){
+        #   n = length(wy)
+        #   sy = sum(i)
+        #   sx = sum(wy)
+        #   ssx = sum(wy^2)
+        #   sxy = sum(i*wy)
+        #   b = (n*sxy - sx*sy)/(n*ssx - sx^2)
+        #   return(b)
+        # } 
+        #  m2 =  t(apply(ne,1,FUN = bsl))
+        #  m2 = as.vector((exp(m2)-1)*100)
+        
         
         #include slop output in new table
         trend.out$index_type="slope"
@@ -674,10 +618,10 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         trend.out$precision_cat = ifelse(pred.ch$Width_of_Credible_Interval<3.5, "High", ifelse(pred.ch$Width_of_Credible_Interval>=3.5 & pred.ch$Width_of_Credible_Interval<=6.7, "Medium", "Low"))
        
         #write.trend2<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	species_id,	season,	period,	years,	min_year, max_year, Trend, index_type,	Trend_Q_0.025, Trend_Q_0.95, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	Width_of_Credible_Interval,	precision_cat,	coverage_num,	coverage_cat,	goal,	goal_lower,	sample_size,	sample_total,	subtitle,	pval,	pval_str,	post_prob,	trnd_order,	dq,	slope_trend,	prob_LD,	prob_MD,	prob_LC,	prob_MI,	prob_LI,	quantile_050,	quantile_165,	quantile_835,	quantile_950,	trend_id,	upload_dt,	error, sd)
-        write.trend2<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_id,	season,	period,	years,	year_start,	year_end,	trnd,	index_type,	upper_ci, lower_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size,	prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
+        write.trend<-trend.out %>% select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
         
         
-        write.table(write.trend2, 
+        write.table(write.trend, 
                     file = paste(out.dir, site, "_", seas, "_TrendsSlope.csv", sep = ""), 
                     row.names = FALSE, 
                     append = TRUE, 
