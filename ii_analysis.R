@@ -421,7 +421,9 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         
       #AUTO-GENERATE TIME PERIODS TO ANALYZE TRENDS
       time.period = NA
-      nyears=max(date.tot$YearCollected)-min(date.tot$YearCollected)
+      nyears=length(unique(date.tot$YearCollected))
+      list.years<-unique(date.tot$YearCollected)
+      rev.years<-rev(list.years)
       
       #Generate all-years, 10 years and 3 generation length.
       
@@ -442,11 +444,12 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         #if 3 gen < 10 years, keep 10 years
         if(gen.length<10){
           gen.length<-10
-          threegen<-endyr-gen.length
-          yrthreegen<-nyears-gen.length
+          #threegen<-endyr-gen.length+1  
+          threegen<-rev.years[gen.length]
+          yrthreegen<-nyears-gen.length+1
         }else{
-          threegen<-endyr-gen.length  
-          yrthreegen<-nyears-gen.length
+          threegen<-rev.years[gen.length]  
+          yrthreegen<-nyears-gen.length+1
         }
         
         #if 3 gen is longer than the available dataset, keep all years  
@@ -455,7 +458,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
           yrthreegen<-1  
         }
         
-        tenyr<-endyr-10
+        tenyr<-rev.years[10]
         yrten<-nyears-10
         
         time.period = c("all years", "10-years", "3Gen-Recent")
@@ -544,7 +547,6 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
                  post_prob = "",
                  trnd_order = "",
                  dq = "",
-                 slope_trend = median(m, na.rm=TRUE),
                  prob_LD = "",
                  prob_MD = "",
                  prob_LC = "",
