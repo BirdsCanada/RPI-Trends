@@ -398,7 +398,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       
       mn.yr1$LOESS_index = loess_func(mn.yr1$index, mn.yr1$year)
       
-      mn.yr1$trend_index<-""
+      mn.yr1$trend_index<-"" #look at CMMN code to generate in next round of analysis
      
       # Order output before printing to table
       
@@ -459,7 +459,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         }
         
         tenyr<-rev.years[10]
-        yrten<-nyears-10
+        yrten<-nyears-9
         
         time.period = c("all years", "10-years", "3Gen-Recent")
         Y1.trend <- c(startyr, tenyr, threegen)

@@ -74,7 +74,7 @@ name<-as.character(anal.param[t,"site"])
     ungroup() %>%
     group_by(SiteCode, YearCollected, MonthCollected, DayCollected, doy) %>% summarize(DurationInHours=sum(DurationInHours)) %>% 
     ungroup() %>%
-    as.data.frame()
+    as.data.frame() %>% drop_na()
   
   obsHours <- unique(subset(obsHours, select = c("YearCollected", "DurationInHours")))
   obsHours <- summaryBy(DurationInHours ~ YearCollected, data = obsHours, FUN = c(mean))
