@@ -55,6 +55,7 @@ tax<-meta_species_taxonomy()
 sp.names<-left_join(sp.names, tax, by=c("species_id"))
 sp.names<-sp.names %>% select("species_code", "species_id", "sort_order", "english_name", "scientific_name", "french_name")
 sp.names<-sp.names %>% distinct(species_code, .keep_all= TRUE)
+sp.names<-sp.names %>% filter(species_code != "HASH") %>% filter(species_code != "NOGO")
 
 project <- 1013 # same for all
 results.code <- "RPI" # same for all

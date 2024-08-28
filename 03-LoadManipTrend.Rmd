@@ -49,7 +49,7 @@ anal.param <- read.csv("Data/RPI_Analysis_Parameters.csv")
 Select your station/season. 
 ```{r chooseSite}
 
-t <- 82
+t <- 76
 
 ```
 

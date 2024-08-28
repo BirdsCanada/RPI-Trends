@@ -22,10 +22,11 @@ write.csv(data, paste(data.dir, site, ".", seas, ".RawData.csv", sep = ""), row.
 
 } #end of try catch, which looks for proceed data on the data.dir first
 
-tmp.data<-
+tmp.data<-NULL
 
 tmp.data<-data %>% format_dates()
 tmp.data <- tmp.data %>% select(SiteCode, project_id, YearCollected, MonthCollected, DayCollected, doy, TimeCollected, DurationInHours, species_id, ObservationCount)
+
 tmp.data<-tmp.data %>% left_join(sp.names, by="species_id")
 
 # if no reason to drop any years at beginning (in anal.param), use min year in dataframe
@@ -44,20 +45,27 @@ tmp.data <- tmp.data %>%
          doy = yday(date),
          season = if_else(doy < 180, "spring", "fall"))
 
-tmp.data<-tmp.data %>% drop_na(species_code)
-
-if(site == "484"){
+if(site == "HawkCount-484"){
   tmp.data <- tmp.data %>%  filter (!(species_code == "BLVU"),
                                   !(species_code == "TUVU")) %>% 
     droplevels() 
 }
 
 
+if(site == "HawkCount-438"){
+  tmp.data <- tmp.data %>%  filter (!(species_code == "BLVU")) %>% 
+    droplevels() 
+}
+
 tmp.data$DurationInHours<-as.numeric(tmp.data$DurationInHours)
+
+if(site == "HawkCount-328"){
+  tmp.data <- tmp.data %>% mutate(DurationInHours = ifelse(DurationInHours>1, 1, DurationInHours)) 
+}
 
 #create events data for zero filling
 event.data <- tmp.data %>%
-  filter(ObservationCount > 0) %>%
+  #filter(ObservationCount > 0) %>%
   group_by(SiteCode, YearCollected, MonthCollected, DayCollected, doy, TimeCollected) %>%
   slice_max(DurationInHours) %>% 
   select(SiteCode, YearCollected, MonthCollected, DayCollected, doy, TimeCollected, DurationInHours) %>% 
@@ -66,6 +74,8 @@ event.data <- tmp.data %>%
   group_by(SiteCode, YearCollected, MonthCollected, DayCollected, doy) %>% summarize(DurationInHours=sum(DurationInHours)) %>% 
   ungroup() %>%
   as.data.frame()
+
+tmp.data<-tmp.data %>% drop_na(species_code)
 
 #Turn on once ready to run the analysis
 if(max(tmp.data$YearCollected) == max.yr) { #continue only if the max year in database is what it should be
@@ -92,6 +102,7 @@ event.dates <- with(event.data,
 
 ## and filter data by the station coverage
 tmp.data <- subset(tmp.data, doy >= event.dates[[1]] & doy <= event.dates[[2]]) 
+event.data<-subset(event.data, doy >= event.dates[[1]] & doy <= event.dates[[2]])
 
 #create species list for analysis
 sp.list <- unique(tmp.data$species_code) 
@@ -425,11 +436,12 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       list.years<-unique(date.tot$YearCollected)
       rev.years<-rev(list.years)
       
-      #Generate all-years, 10 years and 3 generation length.
+      #Generate all-years, 10 years, 20 years and 3 generation length.
       
       if(is.na(time.period)) {
         endyr <- max(date.tot$YearCollected)
         startyr <- min(date.tot$YearCollected)
+        totyr<- endyr-startyr
         
         #Generation length 
         gen<-gen %>% distinct()
@@ -461,12 +473,26 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         tenyr<-rev.years[10]
         yrten<-nyears-9
         
+        if(totyr>20){
+        twentyyr<-rev.years[20]
+        yrtwenty<-nyears-19
+        
+        time.period = c("all years", "20-years", "10-years", "3Gen-Recent")
+        Y1.trend <- c(startyr, twentyyr, tenyr, threegen)
+        Y2.trend <- c(endyr, endyr, endyr, endyr)
+        
+        y1.trend <- c(1, yrtwenty, yrten, yrthreegen)
+        y2.trend <- c(nyears, nyears, nyears, nyears)
+        }else{
+        
         time.period = c("all years", "10-years", "3Gen-Recent")
         Y1.trend <- c(startyr, tenyr, threegen)
         Y2.trend <- c(endyr, endyr, endyr)
-        
+          
         y1.trend <- c(1, yrten, yrthreegen)
         y2.trend <- c(nyears, nyears, nyears)
+          
+        }
         
       } # end is.na(time.period) 
       
@@ -519,7 +545,8 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
                  index_type="endpoint", 
                  species_name=sp.nam$english_name,
                  species_sci_name=sp.nam$scientific_name,
-                 stderr = "", 
+                 stderr = "",
+                 #index_type= "individual", 
                  model_fit = "", 	
                  percent_change_low ="", 
                  percent_change_high = "",
@@ -560,7 +587,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
                  upload_dt = "")
         
        #write.trend<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	species_id,	season,	period,	years,	min_year, max_year, Trend, index_type,	Trend_Q_0.025, Trend_Q_0.95, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	Width_of_Credible_Interval,	precision_cat,	coverage_num,	coverage_cat,	goal,	goal_lower,	sample_size,	sample_total,	subtitle,	pval,	pval_str,	post_prob,	trnd_order,	dq,	slope_trend,	prob_LD,	prob_MD,	prob_LC,	prob_MI,	prob_LI,	quantile_050,	quantile_165,	quantile_835,	quantile_950,	trend_id,	upload_dt,	error, sd)
-        write.trend<-trend.out %>% select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
+        write.trend<-trend.out %>% select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, index_type, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
         
         
         write.table(write.trend, 
@@ -620,7 +647,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         trend.out$precision_cat = ifelse(pred.ch$Width_of_Credible_Interval<3.5, "High", ifelse(pred.ch$Width_of_Credible_Interval>=3.5 & pred.ch$Width_of_Credible_Interval<=6.7, "Medium", "Low"))
        
         #write.trend2<-trend.out %>% select(results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	species_id,	season,	period,	years,	min_year, max_year, Trend, index_type,	Trend_Q_0.025, Trend_Q_0.95, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100,	confidence,	Width_of_Credible_Interval,	precision_cat,	coverage_num,	coverage_cat,	goal,	goal_lower,	sample_size,	sample_total,	subtitle,	pval,	pval_str,	post_prob,	trnd_order,	dq,	slope_trend,	prob_LD,	prob_MD,	prob_LC,	prob_MI,	prob_LI,	quantile_050,	quantile_165,	quantile_835,	quantile_950,	trend_id,	upload_dt,	error, sd)
-        write.trend<-trend.out %>% select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
+        write.trend<-trend.out %>% select(results_code,	version,	area_code,	season,	period, species_code,	species_id,	years,year_start,	year_end,	trnd,	lower_ci, upper_ci, index_type, stderr,	model_type,	model_fit,	percent_change,	percent_change_low,	percent_change_high,	prob_decrease_0,	prob_decrease_25,	prob_decrease_30,	prob_decrease_50,	prob_increase_0,	prob_increase_33,	prob_increase_100, suitability, precision_num,	precision_cat,	coverage_num,	coverage_cat,	sample_size, sample_size_units, prob_LD, prob_MD, prob_LC, prob_MI, prob_LI)
         
         
         write.table(write.trend, 

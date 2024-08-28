@@ -93,7 +93,7 @@ j <- 6
       xlab("Year") +
       ylab("Annual Index") +
       theme_bw() +
-     scale_y_continuous(trans="log10") +
+      scale_y_continuous(trans="log10") +
     # scale_x_continuous(breaks = seq(from = min.yr.filt, to = max.yr.filt, by = 4)) +
     # scale_shape_manual(values = c(1,2)) +
       theme(axis.text.x = element_text(angle = 90, hjust = 1)) +

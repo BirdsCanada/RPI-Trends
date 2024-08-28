@@ -42,7 +42,7 @@ name<-as.character(anal.param[t,"site"])
            doy = yday(date),
            season = if_else(doy < 180, "spring", "fall"))
   
-  tmp.data<-tmp.data %>% drop_na(species_code)
+#  tmp.data<-tmp.data %>% drop_na(species_code)
   
   #truncate spring and fall data
   if(seas =="fall"){
@@ -66,7 +66,7 @@ name<-as.character(anal.param[t,"site"])
   # calculate number of observation hours/day
   
  obsHours <- tmp.data %>%
-    filter(ObservationCount > 0) %>%
+    #filter(ObservationCount > 0) %>%
     group_by(SiteCode, YearCollected, MonthCollected, DayCollected, doy, TimeCollected) %>%
     slice_max(DurationInHours) %>% 
     select(SiteCode, YearCollected, MonthCollected, DayCollected, doy, TimeCollected, DurationInHours) %>% 
