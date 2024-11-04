@@ -105,7 +105,15 @@ tmp.data <- subset(tmp.data, doy >= event.dates[[1]] & doy <= event.dates[[2]])
 event.data<-subset(event.data, doy >= event.dates[[1]] & doy <= event.dates[[2]])
 
 #create species list for analysis
-sp.list <- unique(tmp.data$species_code) 
+sp.list <- unique(tmp.data$species_code)
+
+#temporary fix for vulture. Need to code in the all vulture analysis at this site should start in 1990. 
+if(site=="HawkCount-109"){
+  
+  sp.remove<-c("BLVU", "TUVU")
+  sp.list <- setdiff(sp.list, sp.remove)
+
+}
 
 for(j in 1:length(sp.list)) { 
   
