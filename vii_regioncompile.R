@@ -1,9 +1,9 @@
 myfiles<-list.files(path=out.dir, pattern = "*TrendsSlope.csv", full.names = TRUE)
 myfiles
 
-dat.csv<-ldply(myfiles, read.csv)
+dat.csv<-plyr::ldply(myfiles, read.csv)
 
-detach(package:plyr) #this will screw up the dplyr pacakge. 
+#detach(package:plyr) #this will screw up the dplyr pacakge. 
 
 in.data<-filter(dat.csv, period=="10-years")
 
@@ -17,6 +17,8 @@ in.data<-in.data %>% dplyr::select(species_code, trnd, lower_ci, upper_ci, perio
 #create a categorical trend based on the CI's covering zero or not
 
 in.data<- in.data %>% mutate(trnd_direction = ifelse (lower_ci >=0 & upper_ci >=0, "increase", ifelse (lower_ci<=0 & upper_ci<=0, "decrease", "stable")))
+in.data<-in.data %>%mutate(region = trimws(region))
+
 
 #Subset by season
 in.data.f<-subset(in.data, season=="fall")
@@ -26,11 +28,11 @@ in.data.s<-subset(in.data, season=="spring")
 #Group by region and summarize by species
 
 fall.sum<-in.data.f %>% group_by(species_code, region) %>% 
-  dplyr::summarize(total_stations=n_distinct(area_code)) %>%
+  dplyr::summarize(total_stations=n_distinct(area_code), .groups = "keep") %>%
   ungroup() 
 
 fall.sp.sum<-in.data.f %>% group_by(region, species_code, trnd_direction) %>% 
-  dplyr::summarise(count = length(trnd)) 
+  dplyr::summarise(count = length(trnd), .groups = "keep") 
 
 fall.sum<-left_join(fall.sp.sum, fall.sum, by=c("species_code", "region"), relationship = "many-to-many")
   
@@ -62,6 +64,7 @@ in.data<-in.data %>% dplyr::select(species_code, trnd, lower_ci, upper_ci, perio
 #create a categorical trend based on the CI's covering zero or not
 
 in.data<- in.data %>% mutate(trnd_direction = ifelse (lower_ci >=0 & upper_ci >=0, "increase", ifelse (lower_ci<=0 & upper_ci<=0, "decrease", "stable")))
+in.data<-in.data %>%mutate(region = trimws(region))
 
 #Subset by season
 in.data.f<-subset(in.data, season=="fall")
