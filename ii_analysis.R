@@ -279,8 +279,8 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   hyper.iid<-list(prec=list(prior="pc.prec", param=c(2,0.05)))
   inla.setOption(scale.model.default=TRUE)
   
-    index.gam<- ObservationCount ~ -1 + Xsmy + Xsdy + DurationInHours + f(fyear, model="iid", hyper=hyper.iid) 
-    index.gamS<- ObservationCount ~ - 1 + Xsmy + Xsdy +DurationInHours
+    index.gam<- ObservationCount ~ -1 + Xsmy + Xsdy + f(fyear, model="iid", hyper=hyper.iid) 
+    index.gamS<- ObservationCount ~ - 1 + Xsmy + Xsdy 
 
    ###### RUN ANALYSIS
   
@@ -314,10 +314,10 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   index<- "index.nb" 
  
   #rerun the top model and save output
-  top.model<-try(inla(index.gam, family = family, data = date.tot, #E = DurationInHours, 
+  top.model<-try(inla(index.gam, family = family, data = date.tot, E = DurationInHours, 
                       control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
-  top.modelS<-try(inla(index.gamS, family = family, data = date.tot, #E = DurationInHours, 
+  top.modelS<-try(inla(index.gamS, family = family, data = date.tot, E = DurationInHours, 
                        control.predictor = list(compute = TRUE), control.compute = list(dic=TRUE, config = TRUE), lincomb=lcs, verbose =TRUE), silent = T)
   
 
