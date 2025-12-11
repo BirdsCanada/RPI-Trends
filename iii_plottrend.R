@@ -61,7 +61,7 @@ index<-left_join(index, sp.tax, by="species_id")
 
 index <- index %>%
   filter(!is.na(species_code) & period == "all years") %>%
-  select(index, upper_ci, lower_ci, LOESS_index, english_name, species_id, year, season, area_code) 
+  select(index, upper_ci, lower_ci, LOESS_index, english_name, species_id, year, season, area_code, raw) 
 
 # merge the two
 plot.dat <- NULL
@@ -89,6 +89,7 @@ j <- 6
     out.plot[[k]] <- ggplot(data = subset(plot.dat, english_name %in% sp.list[i:j]), aes(x = as.numeric(year), y = index)) +
       facet_wrap(~ sp.trend, ncol = 2, scales = "free", as.table = TRUE) +
       geom_pointrange(aes(ymin = lower_ci, ymax = upper_ci, group = season, shape = season)) +
+      geom_point(aes(y = raw), colour = "grey")+
       geom_smooth(aes(ymin = lower_ci, ymax = upper_ci, group = season, colour = season, fill = season, linetype = season), method = "loess") + 
       xlab("Year") +
       ylab("Annual Index") +

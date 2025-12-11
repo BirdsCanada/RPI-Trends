@@ -63,7 +63,7 @@ if(site == "HawkCount-328"){
   tmp.data <- tmp.data %>% mutate(DurationInHours = ifelse(DurationInHours>1, 1, DurationInHours)) 
 }
 
-tmp.data<-tmp.data %>% filter(DurationInHours>0) #some site record days they do not collect data which then zero inflates the dataset. This needs removed. 
+#tmp.data<-tmp.data %>% filter(DurationInHours>0) #some site record days they do not collect data which then zero inflates the dataset. This needs removed. 
 
 if(data.type == "hourly"){
   tmp.data<-tmp.data %>% mutate(DurationInHours = ifelse(DurationInHours>1, 1, DurationInHours))
@@ -78,7 +78,7 @@ event.data <- tmp.data %>%
   select(SiteCode, YearCollected, MonthCollected, DayCollected, doy, TimeCollected, DurationInHours) %>% 
   distinct() %>%
   ungroup() %>%
-  group_by(SiteCode, YearCollected, MonthCollected, DayCollected, doy) %>% summarize(DurationInHours=sum(DurationInHours)) %>% 
+  group_by(SiteCode, YearCollected, MonthCollected, DayCollected, doy) %>% summarize(DurationInHours=sum(DurationInHours, na.rm = TRUE)) %>% 
   ungroup() %>%
   as.data.frame()
 
@@ -156,8 +156,16 @@ for(j in 1:length(sp.list)) {
   # each species, to define migration windows
   # taking inner 95% of days with count >= 1
   
-  windows <- with(date.tot, round(quantile(doy, probs = c(seas.pctile1, seas.pctile2)/100, na.rm = T), digits = 0))
-                    
+  windows <- with(
+    subset(date.tot, ObservationCount > 1),
+    round(
+      quantile(doy,
+               probs = c(seas.pctile1, seas.pctile2) / 100,
+               na.rm = TRUE
+      ),
+      digits = 0
+    )
+  )                  
   
   # filter daily data frame by seasonal windows
   
@@ -222,6 +230,14 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   #index for year ordered. 
   #date.tot$oyear <- as.integer(factor(date.tot$YearCollected)) #index for the random site effect
   
+  #Prepare offset
+  date.tot<-date.tot %>% filter(DurationInHours>0) %>% mutate(logDur = log(DurationInHours))
+  
+  #Prepare count per hour, means over the year
+   tmp0<-NULL
+   tmp0<-date.tot %>% mutate(CountHr = ObservationCount/DurationInHours) %>% group_by(YearCollected) %>% summarise(rawch = mean(CountHr)) %>% select(-YearCollected)
+  
+  
   ######### MODEL FORMULAS
   
   #Note: Tried adding oyear as a replicate in the f(doy, model="ar1", replicate=oyear) but this caused issues with inla. Remove and the model runs smooth. 
@@ -264,7 +280,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   inla.setOption(scale.model.default=TRUE)
   
     index.gam<- ObservationCount ~ -1 + Xsmy + Xsdy + DurationInHours + f(fyear, model="iid", hyper=hyper.iid) 
-    index.gamS<- ObservationCount ~ - 1 + Xsmy + Xsdy + DurationInHours
+    index.gamS<- ObservationCount ~ - 1 + Xsmy + Xsdy +DurationInHours
 
    ###### RUN ANALYSIS
   
@@ -332,20 +348,20 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
     
       # Summary of the GAM smooth on year
       # I have checked that this is reflected in the latent posterior samples. Looks good. 
-      
-      #CR<-NULL
-      #nr<-nrow(date.tot) #Year is stored first in the lc output
- 
-      #f.yr<-smooth[1:nr+0*nr, "mean"]
-      #selo.yr<-smooth[1:nr+0*nr, "0.025quant"]
-      #seup.yr<-smooth[1:nr+0*nr, "0.975quant"]
-      
-      #f.doy<-smooth[1:nr+1*nr, "mean"]
-      #selo.doy<-smooth[1:nr+1*nr, "0.025quant"]
-      #seup.doy<-smooth[1:nr+1*nr, "0.975quant"]
-      
-      #oyr<-order(date.tot$fyear)
-      #odoy<-order(date.tot$doyfac)
+      # 
+      # CR<-NULL
+      # nr<-nrow(date.tot) #Year is stored first in the lc output
+      # 
+      # f.yr<-smooth[1:nr+0*nr, "mean"]
+      # selo.yr<-smooth[1:nr+0*nr, "0.025quant"]
+      # seup.yr<-smooth[1:nr+0*nr, "0.975quant"]
+      # 
+      # f.doy<-smooth[1:nr+1*nr, "mean"]
+      # selo.doy<-smooth[1:nr+1*nr, "0.025quant"]
+      # seup.doy<-smooth[1:nr+1*nr, "0.975quant"]
+      # 
+      # oyr<-order(date.tot$fyear)
+      # odoy<-order(date.tot$doyfac)
      
       #MyData <- data.frame(
       #  mu   = c(   f.yr[oyr],    f.doy[odoy]), 
@@ -355,27 +371,27 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       #  ID    = factor(rep(c("Velocity smoother", "Depth smoother"), each = nrow(date.tot))))
       
       
-     ##OLD 
-     #smooth<-top.modelS$summary.lincomb.derived
-     #intercept<-top.modelS[["summary.fixed"]][["mean"]][[1]]
-   
-      #f<-exp(smooth[1:nr, "mean"])
-      #SeLo<-exp(smooth[1:nr, "0.025quant"])
-      #SeUp<-exp(smooth[1:nr, "0.975quant"]) 
-      #CR<-data.frame(mu=f, SeUp=SeUp, SeLo=SeLo, ObservationCount=date.tot$ObservationCount, Year=date.tot$YearCollected)
-      #CR<-CR %>% group_by(Year) %>% summarise(meanCR=mean(mu), meanSeUp = mean(SeUp), meanSeLo=mean(SeLo), raw=mean(ObservationCount)) 
-      
+     ##OLD
+     # smooth<-top.modelS$summary.lincomb.derived
+     # intercept<-top.modelS[["summary.fixed"]][["mean"]][[1]]
+     #
+     #  f<-exp(smooth[1:nr, "mean"])
+     #  SeLo<-exp(smooth[1:nr, "0.025quant"])
+     #  SeUp<-exp(smooth[1:nr, "0.975quant"])
+     #  CR<-data.frame(mu=f, SeUp=SeUp, SeLo=SeLo, ObservationCount=date.tot$ObservationCount, Year=date.tot$YearCollected)
+     #  CR<-CR %>% group_by(Year) %>% summarise(meanCR=mean(mu), meanSeUp = mean(SeUp), meanSeLo=mean(SeLo), raw=mean((ObservationCount)))
+
       # Summary of the GAM smooth on year
-      # I have checked that this is reflected in the latent posterior samples. Looks good. 
-      
-      #nr<-nrow(date.tot) #DOY is stored second in the lc output
-      #smooth<-top.model$summary.lincomb.derived
-      #f<-exp(smooth[3028:6054, "mean"])
-      #SeLo<-exp(smooth[3028:6054, "0.025quant"])
-      #SeUp<-exp(smooth[3028:6054, "0.975quant"]) 
-      #CR<-data.frame(mu=f, SeUp=SeUp, SeLo=SeLo, ObservationCount=date.tot$ObservationCount, doy=date.tot$doy)
-      #CR<-CR %>% group_by(doy) %>% summarise(meanCR=mean(mu), meanOB=mean(ObservationCount), meanSeUp = mean(SeUp), meanSeLo=mean(SeLo)) 
-      
+      # I have checked that this is reflected in the latent posterior samples. Looks good.
+
+      # nr<-nrow(date.tot) #DOY is stored second in the lc output
+      # smooth<-top.model$summary.lincomb.derived
+      # f<-exp(smooth[3028:6054, "mean"])
+      # SeLo<-exp(smooth[3028:6054, "0.025quant"])
+      # SeUp<-exp(smooth[3028:6054, "0.975quant"])
+      # CR<-data.frame(mu=f, SeUp=SeUp, SeLo=SeLo, ObservationCount=date.tot$ObservationCount, doy=date.tot$doy)
+      # CR<-CR %>% group_by(doy) %>% summarise(meanCR=mean(mu), meanOB=mean(ObservationCount), meanSeUp = mean(SeUp), meanSeLo=mean(SeLo))
+
       
       #if(!is.null(top.model)) {        
       
@@ -397,6 +413,24 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       
       tmp1<-tmp1 %>% group_by(YearCollected) %>% summarise_all(mean, na.rm=TRUE)
       tmp1<-tmp1 %>% rowwise() %>% mutate(index = median(c_across(V2:V1001)), lower_ci=quantile(c_across(V2:V1001), 0.025), upper_ci=quantile(c_across(V2:V1001), 0.975), stdev=sd(c_across(V2:V1001))) 
+      
+      #Posterior GAM Smooth
+      #Prediction of the smooth model
+      nsamples<- 1000  
+      post.sample2 <-NULL #clear previous
+      post.sample2<-inla.posterior.sample(nsamples, top.modelS)
+      
+      tmp2 <- select(date.tot, YearCollected)
+      
+      #for each sample in the posterior we want to join the predicted to tmp so that the predictions line up with doy/year and we can get the mean count by year
+      for (h in 1:nsamples){
+        pred<-exp(post.sample2[[h]]$latent[1:nrow(date.tot)])
+        tmp2[ncol(tmp2)+1]<-pred
+      }
+      
+      tmp2<-tmp2 %>% group_by(YearCollected) %>% summarise_all(mean, na.rm=TRUE)
+      tmp3<-tmp2 %>% rowwise() %>% mutate(trend_index = median(c_across(V2:V1001)))
+      
       mn.yr1<-NULL
       mn.yr1<-tmp1 %>% select(YearCollected, index, lower_ci, upper_ci, stdev)
       mn.yr1$species_code <- species
@@ -427,12 +461,13 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       
       mn.yr1$LOESS_index = loess_func(mn.yr1$index, mn.yr1$year)
       
-      mn.yr1$trend_index<-"" #look at CMMN code to generate in next round of analysis
-     
+      mn.yr1$trend_index<-tmp3$trend_index
+      mn.yr1$raw<-tmp0$rawch
+      
       # Order output before printing to table
       
       #mn.yr2<-mn.yr2 %>% select (upload_id,	results_code,	version,	area_code,	species_code,	species_name,	species_sci_name,	year,	season,	period,	species_id,	index,	stderr,	SD,	upper_ci,	lower_ci,	trend_id,	indexloess,	smooth_upper_ci,	smooth_lower_ci,	upload_dt,	error, meanObs, family)
-      mn.yr1<-mn.yr1 %>% select(results_code, version, area_code, season, period, species_code, species_id, year, index, stderr, stdev, upper_ci, lower_ci, LOESS_index, trend_index)
+      mn.yr1<-mn.yr1 %>% select(results_code, version, area_code, season, period, species_code, species_id, year, index, stderr, stdev, upper_ci, lower_ci, LOESS_index, trend_index, raw)
       
        # Write data to table
       write.table(mn.yr1, 
@@ -522,21 +557,6 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         y1 <- y1.trend[p]
         y2 <- y2.trend[p]
         
-        
-        #Prediction of the smooth model
-        nsamples<- 1000  
-        post.sample2 <-NULL #clear previous
-        post.sample2<-inla.posterior.sample(nsamples, top.modelS)
-        
-        tmp2 <- select(date.tot, YearCollected)
-        
-        #for each sample in the posterior we want to join the predicted to tmp so that the predictions line up with doy/year and we can get the mean count by year
-        for (h in 1:nsamples){
-          pred<-exp(post.sample2[[h]]$latent[1:nrow(date.tot)])
-          tmp2[ncol(tmp2)+1]<-pred
-        }
-        
-        tmp2<-tmp2 %>% group_by(YearCollected) %>% summarise_all(mean, na.rm=TRUE)
         
         pred.ch<-tmp2 %>% filter(YearCollected %in% c(Y1, Y2)) %>% select(-YearCollected)
         pred.ch<-t(pred.ch)
