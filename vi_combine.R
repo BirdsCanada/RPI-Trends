@@ -26,3 +26,16 @@ Indices<-Indices[2:m,]
 Indices<-Indices %>% drop_na(results_code)
 
 write.csv(Indices, "Output/2023/AllIndicesRPI.csv", row.names = FALSE)
+
+
+#Check that output match the analysis parameters file. 
+
+#Unique codes in each
+codes_df        <- unique(Trends$area_code)
+codes_analparam <- unique(anal.param$SiteCode)
+
+# Which sites in anal.param are NOT in df?
+missing_in_df <- setdiff(codes_analparam, codes_df)
+
+# Which sites in df are NOT in anal.param?
+extra_in_df <- setdiff(codes_df, codes_analparam)
