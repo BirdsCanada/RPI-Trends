@@ -59,15 +59,15 @@ if(site == "HawkCount-438"){
 
 tmp.data$DurationInHours<-as.numeric(tmp.data$DurationInHours)
 
-if(site == "HawkCount-328"){
-  tmp.data <- tmp.data %>% mutate(DurationInHours = ifelse(DurationInHours>1, 1, DurationInHours)) 
-}
-
-#tmp.data<-tmp.data %>% filter(DurationInHours>0) #some site record days they do not collect data which then zero inflates the dataset. This needs removed. 
-
-if(data.type == "hourly"){
-  tmp.data<-tmp.data %>% mutate(DurationInHours = ifelse(DurationInHours>1, 1, DurationInHours))
-}
+# if(site == "HawkCount-328"){
+#   tmp.data <- tmp.data %>% mutate(DurationInHours = ifelse(DurationInHours>1, 1, DurationInHours)) 
+# }
+# 
+# #tmp.data<-tmp.data %>% filter(DurationInHours>0) #some site record days they do not collect data which then zero inflates the dataset. This needs removed. 
+# 
+# if(data.type == "hourly"){
+#   tmp.data<-tmp.data %>% mutate(DurationInHours = ifelse(DurationInHours>1, 1, DurationInHours))
+# }
 
 #create events data for zero filling
 
