@@ -1,4 +1,5 @@
 source("00_setup.R")
+rm(list = ls()) #clear the environment
 
 #sets parameters for your site
 collection <- "HawkCount"
@@ -234,6 +235,8 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
   date.tot<-date.tot %>% filter(DurationInHours>0) %>% mutate(logDur = log(DurationInHours))
   
   #Prepare count per hour, means over the year
+  
+  ###CHANGE TO MEDIAN IN NEXT ANALYSIS###
    tmp0<-NULL
    tmp0<-date.tot %>% mutate(CountHr = ObservationCount/DurationInHours) %>% group_by(YearCollected) %>% summarise(rawch = mean(CountHr)) %>% select(-YearCollected)
   
@@ -420,6 +423,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       post.sample2 <-NULL #clear previous
       post.sample2<-inla.posterior.sample(nsamples, top.modelS)
       
+      tmp2 <- NULL
       tmp2 <- select(date.tot, YearCollected)
       
       #for each sample in the posterior we want to join the predicted to tmp so that the predictions line up with doy/year and we can get the mean count by year
