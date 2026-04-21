@@ -1,5 +1,5 @@
 source("00_setup.R")
-rm(list = ls()) #clear the environment
+#clear the environment
 
 #sets parameters for your site
 collection <- "HawkCount"
@@ -143,17 +143,15 @@ for(j in 1:length(sp.list)) {
    sp.dat$DurationInHours<-as.numeric(sp.dat$DurationInHours)
    sp.dat$YearCollected<-as.numeric(sp.dat$YearCollected)
     
-    #amalgamate hourly counts into daily totals
-  
-  date.tot <- recast(sp.dat, species_code + YearCollected + doy + DurationInHours ~ variable, 
+   # Amalgamate hourly counts into daily totals
+   date.tot <- recast(sp.dat, species_code + YearCollected + doy + DurationInHours ~ variable, 
                      fun.aggregate = sum, na.rm = TRUE,
                      id.var = c("species_code", "YearCollected", "doy", "DurationInHours"), 
                      measure.var = c("ObservationCount"))
   date.tot <- data.frame(date.tot)
   date.tot <- date.tot %>% drop_na(DurationInHours)
   
-  
-  # determine the 95%ile of days of year with observations for
+  # determine the 95% ile of days of year with observations for
   # each species, to define migration windows
   # taking inner 95% of days with count >= 1
   
@@ -176,16 +174,26 @@ for(j in 1:length(sp.list)) {
   windows <- as.data.frame(t(windows))
   windows$species_code <- species
   windows$site <- site
-
-if(nrow(date.tot)>0){   #only continue if data remains after migration window filter 
   
   #print window to file
   
- # write.table(windows, file = paste(out.dir, site, "_", seas, "_SeasonalWindows.csv", sep = ""), row.names = FALSE, append = TRUE, quote = FALSE, sep = ",", col.names = FALSE)
-    
-  # drop species not detect in 1/2 of all years
+  # write.table(windows, file = paste(out.dir, site, "_", seas, "_SeasonalWindows.csv", sep = ""), row.names = FALSE, append = TRUE, quote = FALSE, sep = ",", col.names = FALSE)
   
-  min.yrs.detect = (max(date.tot$YearCollected) - min(date.tot$YearCollected))/ 2  
+  # Remove impossible rows when duration in hours = 0, but there is a positive observation counts
+  date.tot <- date.tot %>%
+    filter(!(DurationInHours == 0 & ObservationCount > 0))
+  
+  # Remove zero count over the full season. Assumed edge of range or rare (although some could be real)
+  min.zero.year<-date.tot %>% group_by(YearCollected) %>% summarise(n=sum(ObservationCount, na.rm=TRUE)) %>% 
+    filter(n > 0)
+  min.zero.filter<-unique(min.zero.year$YearCollected)  
+  
+  date.tot<-date.tot %>% filter(YearCollected %in% min.zero.filter)
+
+if(nrow(date.tot)>0){   #only continue if data remains after migration window filter 
+  
+  # drop species not detect in 1/2 of all years
+  min.yrs.detect = (max(event.data$YearCollected) - min(event.data$YearCollected))/ 2  
   min.yrs <- date.tot %>% group_by(species_code) %>% summarise(nyrs=n_distinct(YearCollected)) %>% filter(nyrs>=min.yrs.detect)
   
   # and subset dataframe by species list
@@ -498,7 +506,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
       if(is.na(time.period)) {
         endyr <- max(date.tot$YearCollected)
         startyr <- min(date.tot$YearCollected)
-        totyr<- endyr-startyr
+        totyr<- nyears
         
         #Generation length 
         gen<-gen %>% distinct()
@@ -530,7 +538,7 @@ if(nrow(tmp)>0){  #only continue if tmp is great then 10
         tenyr<-rev.years[10]
         yrten<-nyears-9
         
-        if(totyr>20){
+        if(nyears>20){
         twentyyr<-rev.years[20]
         yrtwenty<-nyears-19
         
